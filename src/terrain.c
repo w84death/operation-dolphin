@@ -108,7 +108,7 @@ Terrain* createFlatTerrain(float size, float height_scale) {
                  GL_STATIC_DRAW);
     
     // Load a ground texture
-    terrain->texture_id = loadTexture("textures/grass3.tga");
+    terrain->texture_id = loadTexture("textures/terrain/ground.tga");
     if (terrain->texture_id == 0) {
         printf("Warning: Failed to load terrain texture\n");
     }

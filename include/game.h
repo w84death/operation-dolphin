@@ -24,6 +24,7 @@ typedef enum {
 typedef struct {
     bool sound_enabled;
     bool high_terrain_features;
+    bool invert_y_axis;  // New setting for Y-axis inversion
 } GameSettings;
 
 // Audio structure for managing game audio

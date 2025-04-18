@@ -1,4 +1,4 @@
-// JUNGLE WALKER
+// OPERAION DOLPHIN
 // Description: Main entry point for the FPS game
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"

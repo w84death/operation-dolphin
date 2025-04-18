@@ -34,7 +34,10 @@ void processInput(InputState* input, GameState* game, Player* player, float delt
     // Update camera based on mouse movement if mouse is locked
     if (input->mouse_locked) {
         player->yaw += input->mouse_dx * input->mouse_sensitivity;
-        player->pitch -= input->mouse_dy * input->mouse_sensitivity;
+        
+        // Apply Y-axis inversion if enabled in settings
+        float pitchFactor = game->settings.invert_y_axis ? 1.0f : -1.0f;
+        player->pitch += pitchFactor * input->mouse_dy * input->mouse_sensitivity;
         
         // Normalize yaw to 0-360 degrees
         if (player->yaw >= 360.0f) player->yaw -= 360.0f;

@@ -335,32 +335,32 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     // Draw the billboard as a single quad
     glBegin(GL_QUADS);
     
-    // Bottom left
-    glTexCoord2f(0.0f, 0.0f);
+    // Bottom left - Flip texture coordinates vertically to fix upside-down appearance
+    glTexCoord2f(0.0f, 1.0f);
     glVertex3f(
         x - right_x * half_width,
         y,
         z - right_z * half_width
     );
     
-    // Bottom right
-    glTexCoord2f(1.0f, 0.0f);
+    // Bottom right - Flip texture coordinates vertically
+    glTexCoord2f(1.0f, 1.0f);
     glVertex3f(
         x + right_x * half_width,
         y,
         z + right_z * half_width
     );
     
-    // Top right
-    glTexCoord2f(1.0f, 1.0f);
+    // Top right - Flip texture coordinates vertically
+    glTexCoord2f(1.0f, 0.0f);
     glVertex3f(
         x + right_x * half_width,
         y + height,
         z + right_z * half_width
     );
     
-    // Top left
-    glTexCoord2f(0.0f, 1.0f);
+    // Top left - Flip texture coordinates vertically
+    glTexCoord2f(0.0f, 0.0f);
     glVertex3f(
         x - right_x * half_width,
         y + height,
@@ -587,6 +587,7 @@ void initMenu(GameState* game) {
     // Initialize default settings
     game->settings.sound_enabled = true;
     game->settings.high_terrain_features = true;
+    game->settings.invert_y_axis = MOUSE_INVERT_Y_DEFAULT;  // Initialize with default from config
     
     // Start playing menu music if sound is enabled
     if (game->settings.sound_enabled) {
@@ -626,6 +627,11 @@ void initMenu(GameState* game) {
     game->settings_items[1] = createTextElement(&game->menu_ui, GAME_SETTINGS_SOUND, 
                                               WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 60, 
                                               primary_color, TEXT_ALIGN_RIGHT);
+                                              
+    // Add new invert Y axis setting
+    game->settings_items[2] = createTextElement(&game->menu_ui, GAME_SETTINGS_INVERT, 
+                                              WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 120, 
+                                              primary_color, TEXT_ALIGN_RIGHT);
     
     // Create settings values (initially hidden)
     game->settings_values[0] = createTextElement(&game->menu_ui, GAME_SETTINGS_HIGH, 
@@ -635,9 +641,14 @@ void initMenu(GameState* game) {
     game->settings_values[1] = createTextElement(&game->menu_ui, "ON", 
                                                WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2 + 60, 
                                                primary_color, TEXT_ALIGN_LEFT);
+                                               
+    // Add new invert Y axis value
+    game->settings_values[2] = createTextElement(&game->menu_ui, "OFF", 
+                                               WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2 + 120, 
+                                               primary_color, TEXT_ALIGN_LEFT);
     
     // Hide settings menu initially
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
         setElementVisibility(&game->menu_ui, game->settings_items[i], false);
         setElementVisibility(&game->menu_ui, game->settings_values[i], false);
     }
@@ -675,7 +686,7 @@ void updateMenuUI(GameState* game) {
         }
         
         // Hide settings menu
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             setElementVisibility(&game->menu_ui, game->settings_items[i], false);
             setElementVisibility(&game->menu_ui, game->settings_values[i], false);
         }
@@ -690,7 +701,7 @@ void updateMenuUI(GameState* game) {
         }
         
         // Show settings items
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             setElementVisibility(&game->menu_ui, game->settings_items[i], true);
             setElementVisibility(&game->menu_ui, game->settings_values[i], true);
             
@@ -709,6 +720,8 @@ void updateMenuUI(GameState* game) {
                           game->settings.high_terrain_features ? GAME_SETTINGS_HIGH : GAME_SETTINGS_LOW);
         updateTextElement(&game->menu_ui, game->settings_values[1], 
                           game->settings.sound_enabled ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
+        updateTextElement(&game->menu_ui, game->settings_values[2], 
+                          game->settings.invert_y_axis ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
     }
     else if (game->menu_state == MENU_NONE) {
         // Game is running, hide all menu elements
@@ -718,7 +731,7 @@ void updateMenuUI(GameState* game) {
             setElementVisibility(&game->menu_ui, game->menu_items[i], false);
         }
         
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 3; i++) {
             setElementVisibility(&game->menu_ui, game->settings_items[i], false);
             setElementVisibility(&game->menu_ui, game->settings_values[i], false);
         }
@@ -827,7 +840,7 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                 // Move selection up in the settings menu
                 game->selected_menu_item--;
                 if (game->selected_menu_item < 0) {
-                    game->selected_menu_item = 1; // Settings has 2 items (0 and 1)
+                    game->selected_menu_item = 2; // Settings has 3 items (0, 1, 2)
                 }
                 updateMenuUI(game);
                 break;
@@ -835,7 +848,7 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
             case SDLK_DOWN:
                 // Move selection down in the settings menu
                 game->selected_menu_item++;
-                if (game->selected_menu_item > 1) {
+                if (game->selected_menu_item > 2) {
                     game->selected_menu_item = 0;
                 }
                 updateMenuUI(game);
@@ -866,6 +879,10 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                             pauseBackgroundMusic(&game->audio);
                         }
                         break;
+                        
+                    case 2: // INVERT Y AXIS
+                        game->settings.invert_y_axis = !game->settings.invert_y_axis;
+                        break;
                 }
                 updateMenuUI(game);
                 break;
@@ -894,6 +911,10 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         } else {
                             pauseBackgroundMusic(&game->audio);
                         }
+                        break;
+                        
+                    case 2: // INVERT Y AXIS
+                        game->settings.invert_y_axis = !game->settings.invert_y_axis;
                         break;
                 }
                 updateMenuUI(game);

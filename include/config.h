@@ -2,10 +2,10 @@
 #define CONFIG_H
 
 // Window settings
-#define WINDOW_WIDTH 1024
-#define WINDOW_HEIGHT 768
-#define WINDOW_TITLE "Jungle Walker"
-#define GAME_MENU_TITLE "- J U N G L E - W A L K E R -"
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+#define WINDOW_TITLE "OPERATION DOLPHIN"
+#define GAME_MENU_TITLE "- O P E R A T I O N - D O L P H I N -"
 #define GAME_MENU_RESUME "RESUME GAME"
 #define GAME_MENU_NEWGAME "NEW GAME"
 #define GAME_MENU_SETTINGS "SETTINGS"
@@ -16,6 +16,7 @@
 #define GAME_SETTINGS_LOW "LOW"
 #define GAME_SETTINGS_ON "ON"
 #define GAME_SETTINGS_OFF "OFF"
+#define GAME_SETTINGS_INVERT "INVERT Y AXIS:"
 
 // Audio settings
 #define AUDIO_FREQUENCY 44100
@@ -24,12 +25,15 @@
 #define AUDIO_CHUNKSIZE 2048
 #define MUSIC_VOLUME 64  // 0-128 range for SDL_mixer
 
-#define MENU_MUSIC_FILE "music/Galactic Chase.mp3"
-#define MUSIC_TRACK_1 "music/Galactic Chase.mp3"
-#define MUSIC_TRACK_2 "music/Galactic Chase.mp3"
-#define MUSIC_TRACK_3 "music/Galactic Chase.mp3"
+#define MENU_MUSIC_FILE "music/menu.mp3"
+#define MUSIC_TRACK_1 "music/track1.mp3"
+#define MUSIC_TRACK_2 "music/track2.mp3"
+#define MUSIC_TRACK_3 "music/menu.mp3"
 #define NUM_MUSIC_TRACKS 3
 #define TRACK_SWITCH_TIME 120.0f  // Time in seconds before switching tracks
+
+// Input settings
+#define MOUSE_INVERT_Y_DEFAULT true  // Default setting for Y axis inversion
 
 // Environment settings
 #define TIME_OF_THE_DAY_START 0.3f // 0.0 to 1.0 representing a full day-night cycle
@@ -70,8 +74,8 @@
 #define TERRAIN_MAX_FEATURES 200
 
 // Billboard vegetation settings
-#define VEGETATION_TEXTURE_GRASS "textures/grass1.tga"
-#define VEGETATION_TEXTURE_TREE1 "textures/tree1.tga"
+#define VEGETATION_TEXTURE_GRASS "textures/foliage/small/grass1.tga"
+#define VEGETATION_TEXTURE_TREE1 "textures/foliage/big/tree1.tga"
 #define VEGETATION_DENSITY 0.8f  // Higher values = more vegetation
 
 // Font settings
