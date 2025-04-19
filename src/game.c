@@ -869,40 +869,40 @@ void initMenu(GameState* game) {
     
     // Create settings menu items (initially hidden)
     game->settings_items[0] = createTextElement(&game->menu_ui, GAME_SETTINGS_QUALITY, 
-                                              WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 60, 
+                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 - 60, 
                                               primary_color, TEXT_ALIGN_RIGHT);
     
     game->settings_items[1] = createTextElement(&game->menu_ui, GAME_SETTINGS_SOUND, 
-                                              WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2, 
+                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2, 
                                               primary_color, TEXT_ALIGN_RIGHT);
                                               
     // Add invert Y axis setting
     game->settings_items[2] = createTextElement(&game->menu_ui, GAME_SETTINGS_INVERT, 
-                                              WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 60, 
+                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 + 60, 
                                               primary_color, TEXT_ALIGN_RIGHT);
                                               
     // Add fullscreen toggle setting
     game->settings_items[3] = createTextElement(&game->menu_ui, "FULLSCREEN", 
-                                              WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 120, 
+                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 + 120, 
                                               primary_color, TEXT_ALIGN_RIGHT);
     
     // Create settings values (initially hidden)
     game->settings_values[0] = createTextElement(&game->menu_ui, GAME_SETTINGS_HIGH, 
-                                               WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2 - 60, 
+                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 - 60, 
                                                primary_color, TEXT_ALIGN_LEFT);
     
     game->settings_values[1] = createTextElement(&game->menu_ui, "ON", 
-                                               WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2, 
+                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2, 
                                                primary_color, TEXT_ALIGN_LEFT);
                                                
     // Add invert Y axis value
     game->settings_values[2] = createTextElement(&game->menu_ui, "OFF", 
-                                               WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2 + 60, 
+                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 + 60, 
                                                primary_color, TEXT_ALIGN_LEFT);
                                                
     // Add fullscreen toggle value
     game->settings_values[3] = createTextElement(&game->menu_ui, "OFF", 
-                                               WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2 + 120, 
+                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 + 120, 
                                                primary_color, TEXT_ALIGN_LEFT);
     
     // Hide settings menu initially

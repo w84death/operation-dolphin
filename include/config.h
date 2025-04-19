@@ -36,7 +36,7 @@
 #define MOUSE_INVERT_Y_DEFAULT true  // Default setting for Y axis inversion
 
 // Environment settings
-#define TIME_OF_THE_DAY_START 0.3f // 0.0 to 1.0 representing a full day-night cycle
+#define TIME_OF_THE_DAY_START 0.20f // 0.0 to 1.0 representing a full day-night cycle
 #define TIME_OF_THE_DAY_DURATION 120.0f  // Length of a full day in seconds
 
 // Day/night cycle colors
