@@ -20,6 +20,9 @@
 // For the input system
 static InputState input;
 
+// Global pointer to current game state (for input handling)
+GameState *game_state_ptr = NULL;
+
 // Type definition for vegetation
 typedef struct {
     float x, y, z;       // Position
@@ -555,8 +558,49 @@ void renderVegetation() {
     glEnable(GL_LIGHTING);
 }
 
+// Cut medium-sized foliage in front of the player
+void cutMediumFoliage(Player* player) {
+    if (!player->is_cutting) {
+        return; // Not in cutting animation
+    }
+    
+    // Coordinates for the player's direction vector
+    float dirX = sinf(player->yaw * M_PI / 180.0f);
+    float dirZ = -cosf(player->yaw * M_PI / 180.0f); // Negative for OpenGL coordinate system
+    
+    // Check each vegetation entity
+    for (int i = 0; i < vegetation_count; i++) {
+        // Only consider medium vegetation (type 1) that's active
+        if (vegetation[i].type == 1 && vegetation[i].active) {
+            // Calculate vector from player to vegetation
+            float vecX = vegetation[i].x - player->position_x;
+            float vecZ = vegetation[i].z - player->position_z;
+            
+            // Calculate distance (squared) in the XZ plane
+            float distSquared = vecX * vecX + vecZ * vecZ;
+            
+            // Check if within cutting range
+            if (distSquared <= FOLIAGE_CUTTING_RANGE * FOLIAGE_CUTTING_RANGE) {
+                // Calculate dot product to determine if vegetation is in front of the player
+                float dotProduct = vecX * dirX + vecZ * dirZ;
+                
+                // Vegetation is in front if dot product is positive
+                if (dotProduct > 0) {
+                    // Deactivate the vegetation (cut it)
+                    vegetation[i].active = false;
+                    printf("Cut medium foliage at position (%f, %f, %f)\n", 
+                           vegetation[i].x, vegetation[i].y, vegetation[i].z);
+                }
+            }
+        }
+    }
+}
+
 // Initialize the game state and resources
 bool initGame(GameState* game) {
+    // Set global pointer to current game state (for input handling)
+    game_state_ptr = game;
+    
     // Seed the random number generator
     srand((unsigned int)time(NULL));
 
@@ -1160,6 +1204,11 @@ void updateGame(GameState* game, float delta_time) {
     if (game->menu_state == MENU_NONE && game->game_started) {
         // Update player
         updatePlayer(&game->player, delta_time);
+        
+        // Handle foliage cutting if player is in cutting animation
+        if (game->player.is_cutting) {
+            cutMediumFoliage(&game->player);
+        }
         
         // Update day-night cycle
         updateDayNightCycle(delta_time);

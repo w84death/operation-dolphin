@@ -101,5 +101,6 @@ void initMenu(GameState* game);
 void updateMenuUI(GameState* game);
 void handleMenuInput(GameState* game, SDL_Keycode key);
 void resetGame(GameState* game);
+void cutMediumFoliage(Player* player); // New function to handle cutting medium foliage
 
 #endif // GAME_H

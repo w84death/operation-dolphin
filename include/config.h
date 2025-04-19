@@ -68,8 +68,15 @@
 #define PLAYER_MOVEMENT_SPEED 5.0f
 #define PLAYER_JUMP_VELOCITY 5.0f
 #define PLAYER_GRAVITY 9.8f
-#define PLAYER_WEAPON_MODEL "models/weapon.glb"
-#define PLAYER_WEAPON_TEXTURE "textures/weapons/weapon0.tga"
+
+// Weapon settings
+#define PLAYER_WEAPON_TEXTURE_BASE "textures/weapons/weapon0_"
+#define PLAYER_WEAPON_TEXTURE_0 "textures/weapons/weapon0_0.tga"
+#define PLAYER_WEAPON_TEXTURE_1 "textures/weapons/weapon0_1.tga"
+#define PLAYER_WEAPON_TEXTURE_2 "textures/weapons/weapon0_2.tga"
+#define WEAPON_ANIM_FRAME_TIME 0.1f   // Time per animation frame in seconds
+#define FOLIAGE_CUTTING_RANGE 3.0f    // How far player can reach to cut foliage
+#define FOLIAGE_CUTTING_COOLDOWN 0.5f // Cooldown between cuts in seconds
 
 // Terrain settings
 #define TERRAIN_POSITION_X 0.0f

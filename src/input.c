@@ -211,10 +211,17 @@ void handleMouseButton(InputState* input, int button, bool state) {
         input->mouse_buttons[button] = state;
     }
     
-    // Left click (button 0) in game mode enables mouse lock for camera control
-    if (button == 0 && state == true && !input->mouse_locked) {
-        SDL_SetRelativeMouseMode(SDL_TRUE);
-        input->mouse_locked = true;
+    // Left click (button 0) in game mode enables mouse lock for camera control if not locked
+    if (button == 0 && state == true) {
+        if (!input->mouse_locked) {
+            SDL_SetRelativeMouseMode(SDL_TRUE);
+            input->mouse_locked = true;
+        } else {
+            // If already locked (in-game), left click triggers foliage cutting
+            // The cutMediumFoliage function will be called in updateGame when player.is_cutting is true
+            extern GameState *game_state_ptr; // Use global pointer to current game state
+            startCuttingFoliage(&game_state_ptr->player);
+        }
     }
 }
 

@@ -30,6 +30,10 @@ typedef struct {
     
     // Weapon/interaction
     GLuint weapon_texture_id;  // Texture ID for 2D weapon instead of 3D model
+    int weapon_frame;          // Current animation frame (0, 1, or 2)
+    float weapon_anim_timer;   // Timer for weapon animation
+    bool is_cutting;           // Whether the player is currently cutting foliage
+    float cutting_cooldown;    // Cooldown timer between cuts
 } Player;
 
 // Function declarations
@@ -44,5 +48,10 @@ void movePlayerBackward(Player *player, float delta_time);
 void movePlayerLeft(Player *player, float delta_time);
 void movePlayerRight(Player *player, float delta_time);
 void playerJump(Player *player);
+
+// Weapon and foliage interaction
+void startCuttingFoliage(Player *player);
+void updateWeaponAnimation(Player *player, float delta_time);
+void loadWeaponTexture(Player *player, const char* texture_path);
 
 #endif // PLAYER_H

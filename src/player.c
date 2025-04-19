@@ -7,6 +7,101 @@
 #include "../include/config.h"
 #include "../stb_image.h" // Include stb_image for texture loading
 
+// Load weapon texture from file
+void loadWeaponTexture(Player *player, const char* texture_path) {
+    printf("Loading weapon texture from: %s\n", texture_path);
+    
+    int width, height, channels;
+    unsigned char *image = stbi_load(texture_path, &width, &height, &channels, STBI_rgb_alpha);
+    
+    if (!image) {
+        printf("Error loading weapon texture: %s\n", stbi_failure_reason());
+        return;
+    }
+    
+    // Delete previous texture if it exists
+    if (player->weapon_texture_id != 0) {
+        glDeleteTextures(1, &player->weapon_texture_id);
+    }
+    
+    // Generate texture
+    glGenTextures(1, &player->weapon_texture_id);
+    glBindTexture(GL_TEXTURE_2D, player->weapon_texture_id);
+    
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    // Upload texture data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+    
+    // Free the image data as it's now in GPU memory
+    stbi_image_free(image);
+    
+    printf("Weapon texture loaded successfully, ID: %u\n", player->weapon_texture_id);
+}
+
+// Update weapon animation state
+void updateWeaponAnimation(Player *player, float delta_time) {
+    // Handle cutting cooldown
+    if (player->cutting_cooldown > 0.0f) {
+        player->cutting_cooldown -= delta_time;
+        if (player->cutting_cooldown <= 0.0f) {
+            player->cutting_cooldown = 0.0f;
+        }
+    }
+    
+    // Only update animation if currently cutting
+    if (player->is_cutting) {
+        player->weapon_anim_timer += delta_time;
+        
+        // Update animation frames
+        if (player->weapon_anim_timer >= WEAPON_ANIM_FRAME_TIME) {
+            player->weapon_frame = (player->weapon_frame + 1) % 3; // Cycle through 0, 1, 2
+            player->weapon_anim_timer = 0.0f;
+            
+            // Load the appropriate texture for this frame
+            const char* texture_path;
+            switch (player->weapon_frame) {
+                case 0:
+                    texture_path = PLAYER_WEAPON_TEXTURE_0;
+                    break;
+                case 1:
+                    texture_path = PLAYER_WEAPON_TEXTURE_1;
+                    break;
+                case 2:
+                    texture_path = PLAYER_WEAPON_TEXTURE_2;
+                    break;
+            }
+            loadWeaponTexture(player, texture_path);
+            
+            // If we've completed the animation cycle, stop cutting
+            if (player->weapon_frame == 0) {
+                player->is_cutting = false;
+            }
+        }
+    }
+}
+
+// Start the foliage cutting action
+void startCuttingFoliage(Player *player) {
+    // Only start cutting if not already cutting and cooldown has expired
+    if (!player->is_cutting && player->cutting_cooldown <= 0.0f) {
+        player->is_cutting = true;
+        player->weapon_frame = 0;
+        player->weapon_anim_timer = 0.0f;
+        player->cutting_cooldown = FOLIAGE_CUTTING_COOLDOWN;
+        
+        // Load the first frame of the cutting animation
+        loadWeaponTexture(player, PLAYER_WEAPON_TEXTURE_0);
+        
+        // Log that we're cutting
+        printf("Player is cutting foliage\n");
+    }
+}
+
 // Initialize the player with default values and load weapon texture
 void initPlayer(Player *player) {
     // Initialize position and orientation
@@ -31,34 +126,14 @@ void initPlayer(Player *player) {
     player->is_moving = false;
     player->is_jumping = false;
     
-    // Load weapon texture
-    printf("Loading weapon texture from: %s\n", PLAYER_WEAPON_TEXTURE);
+    // Weapon animation and interaction properties
+    player->weapon_frame = 0;
+    player->weapon_anim_timer = 0.0f;
+    player->is_cutting = false;
+    player->cutting_cooldown = 0.0f;
     
-    int width, height, channels;
-    unsigned char *image = stbi_load(PLAYER_WEAPON_TEXTURE, &width, &height, &channels, STBI_rgb_alpha);
-    
-    if (!image) {
-        printf("Error loading weapon texture: %s\n", stbi_failure_reason());
-        return;
-    }
-    
-    // Generate texture
-    glGenTextures(1, &player->weapon_texture_id);
-    glBindTexture(GL_TEXTURE_2D, player->weapon_texture_id);
-    
-    // Set texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    // Upload texture data
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-    
-    // Free the image data as it's now in GPU memory
-    stbi_image_free(image);
-    
-    printf("Weapon texture loaded successfully, ID: %u\n", player->weapon_texture_id);
+    // Load initial weapon texture
+    loadWeaponTexture(player, PLAYER_WEAPON_TEXTURE_0);
 }
 
 // Update player state based on time
@@ -85,6 +160,9 @@ void updatePlayer(Player *player, float delta_time) {
     // Clamp pitch to avoid looking too far up or down
     if (player->pitch > 89.0f) player->pitch = 89.0f;
     if (player->pitch < -89.0f) player->pitch = -89.0f;
+    
+    // Update weapon animation
+    updateWeaponAnimation(player, delta_time);
 }
 
 // Render the player's weapon
