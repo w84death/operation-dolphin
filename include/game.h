@@ -82,8 +82,8 @@ typedef struct {
     // Menu UI elements
     int menu_title_id;
     int menu_items[6];
-    int settings_items[2];
-    int settings_values[2];
+    int settings_items[3]; // Increased from 2 to 3 to accommodate invert Y axis setting
+    int settings_values[3]; // Increased from 2 to 3 to accommodate invert Y axis setting
 
     // Audio system
     AudioSystem audio;
