@@ -24,27 +24,24 @@ static InputState input;
 // Global pointer to current game state (for input handling)
 GameState *game_state_ptr = NULL;
 
-// Type definition for vegetation
-typedef struct {
-    float x, y, z;       // Position
-    float width, height; // Dimensions
-    int texture_index;   // Which texture to use
-    int type;            // 0=small, 1=medium, 2=big
-    bool active;         // Whether this vegetation is visible
-} Vegetation;
-
-// Vegetation array
+// Global vegetation data
 static Vegetation* vegetation = NULL;
 static int vegetation_count = 0;
+static int vegetation_capacity = 0;
 
-// Texture arrays for different vegetation sizes
-#define MAX_TEXTURES_PER_SIZE 12
+// Textures for vegetation billboards
+#define MAX_TEXTURES_PER_SIZE 16
 static GLuint vegetation_textures_small[MAX_TEXTURES_PER_SIZE];
-static int small_texture_count = 0;
-static GLuint vegetation_textures_medium[MAX_TEXTURES_PER_SIZE];  
-static int medium_texture_count = 0;
+static GLuint vegetation_textures_medium[MAX_TEXTURES_PER_SIZE];
 static GLuint vegetation_textures_big[MAX_TEXTURES_PER_SIZE];
+static int small_texture_count = 0;
+static int medium_texture_count = 0;
 static int big_texture_count = 0;
+
+// Constants for max features per category for each chunk
+#define TERRAIN_MAX_FEATURES_SMALL 500
+#define TERRAIN_MAX_FEATURES_MEDIUM 200
+#define TERRAIN_MAX_FEATURES_BIG 50
 
 // Initialize audio system
 bool initAudio(AudioSystem* audio) {
@@ -262,7 +259,7 @@ void cleanupAudio(AudioSystem* audio) {
     }
 }
 
-// Load textures for billboarded vegetation
+// Load textures for all vegetation types
 bool loadVegetationTextures() {
     // Small vegetation textures (flowers, grass)
     const char* small_textures[] = {
@@ -358,61 +355,98 @@ bool loadVegetationTextures() {
     return true;
 }
 
-// Create random vegetation with three size categories
+// Create random vegetation with three size categories (legacy function for backward compatibility)
 void createVegetation(int count, float terrain_size) {
     // Free previous vegetation if any
+    cleanupVegetation();
+    
+    // Just create vegetation for a single chunk (0,0) using the global seed
+    createVegetationForChunk(0, 0, terrain_size, getGlobalTerrainSeed());
+}
+
+// Clean up vegetation resources
+void cleanupVegetation(void) {
     if (vegetation != NULL) {
         free(vegetation);
+        vegetation = NULL;
+    }
+    vegetation_count = 0;
+    vegetation_capacity = 0;
+}
+
+// Function to ensure we have enough capacity for vegetation
+void ensureVegetationCapacity(int required_capacity) {
+    if (vegetation_capacity >= required_capacity) {
+        return; // We already have enough capacity
     }
     
-    // Calculate counts for each type based on density settings
-    int base_count = count > TERRAIN_MAX_FEATURES / 2 ? count : count / 2;
+    // Calculate new capacity (double current or minimum required)
+    int new_capacity = vegetation_capacity == 0 ? 
+                       required_capacity : 
+                       vegetation_capacity * 2;
+    if (new_capacity < required_capacity) {
+        new_capacity = required_capacity;
+    }
+    
+    // Reallocate the vegetation array
+    Vegetation* new_vegetation = realloc(vegetation, sizeof(Vegetation) * new_capacity);
+    if (new_vegetation == NULL) {
+        logError("Failed to reallocate memory for vegetation (requested capacity: %d)\n", new_capacity);
+        return; // Failed to allocate
+    }
+    
+    vegetation = new_vegetation;
+    vegetation_capacity = new_capacity;
+    
+    logInfo("Resized vegetation array to capacity: %d\n", vegetation_capacity);
+}
+
+// Create vegetation for a specific chunk with a specific seed
+void createVegetationForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed) {
     
     // Apply density multipliers to calculate actual counts for each category
-    int count_small = (int)(base_count * VEGETATION_DENSITY_SMALL);
-    if (count_small > TERRAIN_MAX_FEATURES_SMALL) count_small = TERRAIN_MAX_FEATURES_SMALL;
+    int count_small = (int)(TERRAIN_MAX_FEATURES * VEGETATION_DENSITY_SMALL);
+    int count_medium = (int)(TERRAIN_MAX_FEATURES * VEGETATION_DENSITY_MEDIUM);
+    int count_big = (int)(TERRAIN_MAX_FEATURES * VEGETATION_DENSITY_BIG);
     
-    int count_medium = (int)(base_count * VEGETATION_DENSITY_MEDIUM);
-    if (count_medium > TERRAIN_MAX_FEATURES_MEDIUM) count_medium = TERRAIN_MAX_FEATURES_MEDIUM;
-    
-    int count_big = (int)(base_count * VEGETATION_DENSITY_BIG);
-    if (count_big > TERRAIN_MAX_FEATURES_BIG) count_big = TERRAIN_MAX_FEATURES_BIG;
-    
-    // Print debug information about density calculations
-    logInfo("Vegetation density calculations:\n");
-    logInfo("  Base count: %d\n", base_count);
-    logInfo("  Small vegetation: %d × %.1f = %d (max: %d)\n", 
-           base_count, VEGETATION_DENSITY_SMALL, count_small, TERRAIN_MAX_FEATURES_SMALL);
-    logInfo("  Medium vegetation: %d × %.1f = %d (max: %d)\n", 
-           base_count, VEGETATION_DENSITY_MEDIUM, count_medium, TERRAIN_MAX_FEATURES_MEDIUM);
-    logInfo("  Big vegetation: %d × %.1f = %d (max: %d)\n", 
-           base_count, VEGETATION_DENSITY_BIG, count_big, TERRAIN_MAX_FEATURES_BIG);
-    
-    // Total vegetation count
-    int total_count = count_small + count_medium + count_big;
-    vegetation_count = total_count;
-    
-    // Allocate memory for vegetation
-    vegetation = (Vegetation*)malloc(sizeof(Vegetation) * vegetation_count);
-    if (vegetation == NULL) {
-        logError("Failed to allocate memory for vegetation\n");
-        return;
+    // Get quality setting from game state to adjust foliage density
+    GameState* game = game_state_ptr;
+    if (game && !game->settings.high_terrain_features) {
+        count_small = count_small / 2;
+        count_medium = count_medium / 2;
+        count_big = count_big / 2;
+        logInfo("Low quality mode: reducing vegetation density by 50%%\n");
     }
     
-    logInfo("Creating %d vegetation objects: %d small, %d medium, %d big\n", 
-           total_count, count_small, count_medium, count_big);
+    // Calculate total vegetation needed
+    int total_count = count_small + count_medium + count_big;
     
-    // Create random vegetation
-    float half_size = terrain_size / 2.0f;
-    int current_index = 0;
+    // Make sure we have enough capacity
+    int required_capacity = vegetation_count + total_count;
+    ensureVegetationCapacity(required_capacity);
+    
+    // Initialize random seed for this chunk
+    unsigned int chunk_seed = seed + (unsigned int)((chunk_x * 73856093) ^ (chunk_z * 19349663));
+    srand(chunk_seed);
+    
+    logInfo("Creating vegetation for chunk (%d,%d) with seed %u: %d small, %d medium, %d big\n", 
+           chunk_x, chunk_z, chunk_seed, count_small, count_medium, count_big);
+    
+    // Calculate world position for this chunk
+    float half_size = chunk_size / 2.0f;
+    float chunk_offset_x = chunk_x * chunk_size;
+    float chunk_offset_z = chunk_z * chunk_size;
+    int current_index = vegetation_count;
     
     // Ground level from terrain settings
     float ground_level = TERRAIN_POSITION_Y;
     
     // Create small vegetation (flowers, grass)
     for (int i = 0; i < count_small; i++) {
-        vegetation[current_index].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
-        vegetation[current_index].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
+        if (current_index >= vegetation_capacity) break;
+        
+        vegetation[current_index].x = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_x;
+        vegetation[current_index].z = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_z;
         vegetation[current_index].type = 0;  // Small type
         vegetation[current_index].texture_index = rand() % small_texture_count;
         vegetation[current_index].width = 0.5f + ((float)rand() / RAND_MAX) * 0.5f;
@@ -421,14 +455,19 @@ void createVegetation(int count, float terrain_size) {
         // Place vegetation ON the ground surface (not buried)
         vegetation[current_index].y = ground_level + 0.01f; // Slightly above ground level to prevent z-fighting
         
+        // Store which chunk this vegetation belongs to
+        vegetation[current_index].chunk_x = chunk_x;
+        vegetation[current_index].chunk_z = chunk_z;
         vegetation[current_index].active = true;
         current_index++;
     }
     
     // Create medium vegetation (bushes, aloes)
     for (int i = 0; i < count_medium; i++) {
-        vegetation[current_index].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
-        vegetation[current_index].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
+        if (current_index >= vegetation_capacity) break;
+        
+        vegetation[current_index].x = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_x;
+        vegetation[current_index].z = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_z;
         vegetation[current_index].type = 1;  // Medium type
         vegetation[current_index].texture_index = rand() % medium_texture_count;
         vegetation[current_index].width = 1.5f + ((float)rand() / RAND_MAX) * 1.0f;
@@ -437,14 +476,19 @@ void createVegetation(int count, float terrain_size) {
         // Place medium vegetation ON the ground surface (not buried)
         vegetation[current_index].y = ground_level + 0.01f; // Slightly above ground level
         
+        // Store which chunk this vegetation belongs to
+        vegetation[current_index].chunk_x = chunk_x;
+        vegetation[current_index].chunk_z = chunk_z;
         vegetation[current_index].active = true;
         current_index++;
     }
     
     // Create big vegetation (trees, palms)
     for (int i = 0; i < count_big; i++) {
-        vegetation[current_index].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
-        vegetation[current_index].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
+        if (current_index >= vegetation_capacity) break;
+        
+        vegetation[current_index].x = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_x;
+        vegetation[current_index].z = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_z;
         vegetation[current_index].type = 2;  // Big type
         vegetation[current_index].texture_index = rand() % big_texture_count;
         vegetation[current_index].width = 3.0f + ((float)rand() / RAND_MAX) * 2.0f;
@@ -453,97 +497,91 @@ void createVegetation(int count, float terrain_size) {
         // Place vegetation properly on the ground (y position)
         vegetation[current_index].y = ground_level + 0.01f; // Slightly above ground level
         
+        // Store which chunk this vegetation belongs to
+        vegetation[current_index].chunk_x = chunk_x;
+        vegetation[current_index].chunk_z = chunk_z;
         vegetation[current_index].active = true;
         current_index++;
     }
+    
+    // Update the total vegetation count
+    vegetation_count = current_index;
+    
+    // Restore the global random seed
+    srand(time(NULL));
 }
 
 // Draw a billboard that always faces the camera
 void drawBillboard(float x, float y, float z, float width, float height, GLuint texture) {
-    // Get the modelview matrix
+    // Save the current matrix
+    glPushMatrix();
+    
+    // Position at the base of the billboard
+    glTranslatef(x, y, z);
+    
+    // Get the current modelview matrix
     float modelview[16];
     glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
     
-    // Extract the right vector from the modelview matrix
-    float right_x = modelview[0];
-    float right_z = modelview[8];
+    // Create a modelview matrix for the billboard that only contains position
+    modelview[0] = 1.0f;
+    modelview[1] = 0.0f;
+    modelview[2] = 0.0f;
     
-    // Calculate the four corners of the billboard
-    float half_width = width / 2.0f;
+    modelview[4] = 0.0f;
+    modelview[5] = 1.0f;
+    modelview[6] = 0.0f;
     
-    // Save current lighting state
-    GLboolean lighting_enabled = glIsEnabled(GL_LIGHTING);
+    modelview[8] = 0.0f;
+    modelview[9] = 0.0f;
+    modelview[10] = 1.0f;
     
-    // Enable texturing 
+    glLoadMatrixf(modelview);
+    
+    // Enable texturing and proper alpha blending for vegetation
     glEnable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    // Use alpha testing instead of alpha blending for foliage
+    // Critical fix: use alpha testing to avoid transparent pixels being drawn at all
     glEnable(GL_ALPHA_TEST);
-    glAlphaFunc(GL_GREATER, 0.5f);  // Only render pixels with alpha > 0.5
+    glAlphaFunc(GL_GREATER, 0.5f); // Only render pixels with alpha > 0.1
     
-    // Bind the texture
+    // glDepthMask(GL_FALSE); // Don't write to depth buffer for transparent objects
     glBindTexture(GL_TEXTURE_2D, texture);
     
-    // Set material properties for proper lighting interaction
-    if (lighting_enabled) {
-        // Set normal pointing towards the camera (for billboards)
-        float normal[3];
-        normal[0] = -modelview[2];  // Inverse of the camera's forward vector
-        normal[1] = -modelview[6];
-        normal[2] = -modelview[10];
-        
-        // Normalize the vector
-        float length = sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
-        if (length > 0.0001f) {
-            normal[0] /= length;
-            normal[1] /= length;
-            normal[2] /= length;
-        }
-        
-        glNormal3fv(normal);
-    }
+    // Half width and height for quad vertices
+    float half_width = width / 2.0f;
     
-    // Draw the billboard as a single quad
+    // Draw quad
     glBegin(GL_QUADS);
     
-    // Bottom left - Flip texture coordinates vertically to fix upside-down appearance
-    // Place pivot exactly at the bottom position (y)
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(
-        x - right_x * half_width,
-        y, // Bottom position
-        z - right_z * half_width
-    );
+    // Bottom left - anchored at ground level
+    glTexCoord2f(0.0f, 1.0f);  // Flip texture coordinates vertically
+    glVertex3f(-half_width, 0.0f, 0.0f);
     
-    // Bottom right - Flip texture coordinates vertically
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(
-        x + right_x * half_width,
-        y, // Bottom position
-        z + right_z * half_width
-    );
+    // Bottom right
+    glTexCoord2f(1.0f, 1.0f);  // Flip texture coordinates vertically
+    glVertex3f(half_width, 0.0f, 0.0f);
     
-    // Top right - Flip texture coordinates vertically
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(
-        x + right_x * half_width,
-        y + height, // Full height above ground
-        z + right_z * half_width
-    );
+    // Top right
+    glTexCoord2f(1.0f, 0.0f);  // Flip texture coordinates vertically
+    glVertex3f(half_width, height, 0.0f);
     
-    // Top left - Flip texture coordinates vertically
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(
-        x - right_x * half_width,
-        y + height, // Full height above ground
-        z - right_z * half_width
-    );
+    // Top left
+    glTexCoord2f(0.0f, 0.0f);  // Flip texture coordinates vertically
+    glVertex3f(-half_width, height, 0.0f);
     
     glEnd();
     
-    // Disable texturing and alpha test
+    // Restore state
     glDisable(GL_ALPHA_TEST);
+    glDepthMask(GL_TRUE); // Re-enable depth writing
+    glDisable(GL_BLEND);
     glDisable(GL_TEXTURE_2D);
+    
+    // Restore the previous matrix
+    glPopMatrix();
 }
 
 // Render all vegetation
@@ -564,22 +602,44 @@ void renderVegetation() {
     
     // Make sure textures properly interact with lighting
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+    // Sort vegetation by type and distance before rendering
+    // This ensures proper transparency layering (back-to-front)
     
-    // Render each piece of vegetation as a billboard
+    // First render big vegetation (trees, palms) since they're typically furthest
     for (int i = 0; i < vegetation_count; i++) {
-        if (vegetation[i].active) {
-            GLuint texture;
-            switch (vegetation[i].type) {
-                case 0:
-                    texture = vegetation_textures_small[vegetation[i].texture_index];
-                    break;
-                case 1:
-                    texture = vegetation_textures_medium[vegetation[i].texture_index];
-                    break;
-                case 2:
-                    texture = vegetation_textures_big[vegetation[i].texture_index];
-                    break;
-            }
+        if (vegetation[i].active && vegetation[i].type == 2) {
+            GLuint texture = vegetation_textures_big[vegetation[i].texture_index];
+            drawBillboard(
+                vegetation[i].x, 
+                vegetation[i].y, 
+                vegetation[i].z, 
+                vegetation[i].width, 
+                vegetation[i].height, 
+                texture
+            );
+        }
+    }
+    
+    // Then render medium vegetation (bushes, aloe)
+    for (int i = 0; i < vegetation_count; i++) {
+        if (vegetation[i].active && vegetation[i].type == 1) {
+            GLuint texture = vegetation_textures_medium[vegetation[i].texture_index];
+            drawBillboard(
+                vegetation[i].x, 
+                vegetation[i].y, 
+                vegetation[i].z, 
+                vegetation[i].width, 
+                vegetation[i].height, 
+                texture
+            );
+        }
+    }
+    
+    // Finally render small vegetation (grass, flowers)
+    for (int i = 0; i < vegetation_count; i++) {
+        if (vegetation[i].active && vegetation[i].type == 0) {
+            GLuint texture = vegetation_textures_small[vegetation[i].texture_index];
             drawBillboard(
                 vegetation[i].x, 
                 vegetation[i].y, 
@@ -629,12 +689,13 @@ void cutMediumFoliage(Player* player) {
                     
                     // Spawn particle effect using the vegetation's texture
                     spawnFoliageParticles(vegetation[i].x, vegetation[i].y + vegetation[i].height * 0.5f, 
-                                         vegetation[i].z, texture);
+                                          vegetation[i].z, texture);
                     
                     // Deactivate the vegetation (cut it)
                     vegetation[i].active = false;
-                    logInfo("Cut medium foliage at position (%f, %f, %f)\n", 
-                           vegetation[i].x, vegetation[i].y, vegetation[i].z);
+                    logInfo("Cut medium foliage at position (%f, %f, %f) in chunk (%d,%d)\n", 
+                           vegetation[i].x, vegetation[i].y, vegetation[i].z,
+                           vegetation[i].chunk_x, vegetation[i].chunk_z);
                 }
             }
         }
@@ -955,7 +1016,7 @@ void initMenu(GameState* game) {
 void updateMenuUI(GameState* game) {
     SDL_Color primary_color = {UI_PRIMARY_COLOR_R, UI_PRIMARY_COLOR_G, UI_PRIMARY_COLOR_B, UI_PRIMARY_COLOR_A};
     SDL_Color secondary_color = {UI_SECONDARY_COLOR_R, UI_SECONDARY_COLOR_G, UI_SECONDARY_COLOR_B, UI_SECONDARY_COLOR_A};
-    SDL_Color accent_color = {UI_ACCENT_COLOR_R, UI_ACCENT_COLOR_G, UI_ACCENT_COLOR_B, UI_ACCENT_COLOR_A};
+    SDL_Color accent_color = {UI_ACCENT_COLOR_R, UI_ACCENT_COLOR_G, UI_ACCENT_COLOR_B, UI_PRIMARY_COLOR_A};
     
     if (game->menu_state == MENU_MAIN) {
         // Show title and main menu items
@@ -1582,9 +1643,7 @@ void cleanupGame(GameState* game) {
     cleanupTerrain(game->terrain);
     
     // Free vegetation
-    if (vegetation != NULL) {
-        free(vegetation);
-    }
+    cleanupVegetation();
     
     // Clean up audio system
     cleanupAudio(&game->audio);

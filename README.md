@@ -2,16 +2,6 @@
 
 Operation Dolphin: Echoes of the Mesozoic blends the chaos of the Vietnam War with genetically engineered dinosaurs, creating a pulpy, adrenaline-fueled narrative. Set in 1968, you play as Captain Jack "Marlin" Kowalski, a MACV-SOG operative tasked with infiltrating a CIA black site codenamed Warehouse X-Ray deep in the Annamite jungles of Laos. The mission: recover Project DOLPHIN's classified files—a blueprint for weaponized dinosaurs engineered to destabilize North Vietnamese supply lines along the Ho Chi Minh Trail.
 
-<iframe frameborder="0" src="https://itch.io/embed/3486137?bg_color=1b321e&amp;fg_color=ffffff&amp;link_color=ffffff&amp;border_color=809c8e" width="552" height="167"><a href="https://w84death.itch.io/operation-dolphin">Operation Dolphin by P1X</a></iframe>
-
-## Official Release & Support
-
-Operation Dolphin is available for free on our [official itch.io page](https://w84death.itch.io/operation-dolphin). If you enjoy the game and would like to support future development:
-
-- **Donations**: Consider supporting us through [itch.io donations](https://w84death.itch.io/operation-dolphin/donate) - every contribution helps us continue making unique retro-inspired experiences
-- **Community**: Join our community by leaving comments, sharing feedback, or participating in discussions on our itch.io page
-- **Sharing**: Help spread the word by sharing the game with friends who might enjoy classic first-person shooters
-
 ![Gameplay Screenshot](media/gameplay.png)
 
 ## Gameplay
@@ -66,3 +56,12 @@ Operation Dolphin was designed to be accessible with minimal hardware requiremen
 - **Sound**: Basic audio hardware supporting stereo output
 
 The game runs at a default resolution of 640x480 and features simple OpenGL rendering with day/night cycles, particle effects, and basic lighting. It's been optimized to run smoothly even on older hardware while maintaining an immersive jungle environment.
+
+
+## Official Release & Support
+
+Operation Dolphin is available for free on our [official itch.io page](https://w84death.itch.io/operation-dolphin). If you enjoy the game and would like to support future development:
+
+- **Donations**: Consider supporting us through [itch.io donations](https://w84death.itch.io/operation-dolphin/donate) - every contribution helps us continue making unique retro-inspired experiences
+- **Community**: Join our community by leaving comments, sharing feedback, or participating in discussions on our itch.io page
+- **Sharing**: Help spread the word by sharing the game with friends who might enjoy classic first-person shooters

@@ -44,6 +44,16 @@ typedef struct {
     float track_switch_timer;        // Timer for track switching
 } AudioSystem;
 
+// Type definition for vegetation
+typedef struct {
+    float x, y, z;       // Position
+    float width, height; // Dimensions
+    int texture_index;   // Which texture to use
+    int type;            // 0=small, 1=medium, 2=big
+    bool active;         // Whether this vegetation is visible
+    int chunk_x, chunk_z; // Which chunk this vegetation belongs to
+} Vegetation;
+
 // Game state structure
 typedef struct {
     bool running;
@@ -110,5 +120,12 @@ void updateMenuUI(GameState* game);
 void handleMenuInput(GameState* game, SDL_Keycode key);
 void resetGame(GameState* game);
 void cutMediumFoliage(Player* player); // New function to handle cutting medium foliage
+
+// Vegetation related functions
+void createVegetation(int count, float terrain_size);
+void createVegetationForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed);
+void renderVegetation(void);
+bool loadVegetationTextures(void);
+void cleanupVegetation(void);
 
 #endif // GAME_H

@@ -147,15 +147,13 @@
 #define TERRAIN_POSITION_Z 0.0f
 #define TERRAIN_TILE_SIZE 50.0f
 #define TERRAIN_HEIGHT_SCALE 5.0f
-#define TERRAIN_MAX_FEATURES 200
+
 
 // Billboard vegetation settings
-#define VEGETATION_DENSITY_SMALL 20.0f  // Multiplier for small vegetation
-#define VEGETATION_DENSITY_MEDIUM 5.0f  // Multiplier for medium vegetation
-#define VEGETATION_DENSITY_BIG 2.0f  // Multiplier for big vegetation
-#define TERRAIN_MAX_FEATURES_SMALL 5000  // Small vegetation count
-#define TERRAIN_MAX_FEATURES_MEDIUM 500  // Medium vegetation count
-#define TERRAIN_MAX_FEATURES_BIG 250  // Big vegetation count
+#define TERRAIN_MAX_FEATURES 5000
+#define VEGETATION_DENSITY_SMALL 0.8f  // Multiplier for small vegetation
+#define VEGETATION_DENSITY_MEDIUM 0.2f  // Multiplier for medium vegetation
+#define VEGETATION_DENSITY_BIG 0.05f  // Multiplier for big vegetation
 
 // Font settings
 #define GAME_FONT_FILE "fonts/NovaSquare-Regular.ttf"

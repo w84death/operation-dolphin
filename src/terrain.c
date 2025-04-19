@@ -9,17 +9,39 @@
 #include "../include/log.h"
 #include "../stb_image.h"
 
-// Create a flat terrain with a simple texture
+// Global seed for terrain and vegetation generation
+static unsigned int global_terrain_seed = 12345;
+
+// Set the global terrain seed
+void setGlobalTerrainSeed(unsigned int seed) {
+    global_terrain_seed = seed;
+    log_info("Set global terrain seed to: %u", seed);
+}
+
+// Get the global terrain seed
+unsigned int getGlobalTerrainSeed(void) {
+    return global_terrain_seed;
+}
+
+// Create a flat terrain with a simple texture (legacy function, kept for backward compatibility)
 Terrain* createFlatTerrain(float size, float height_scale) {
+    // Use default chunk (0,0) with the global seed
+    return createTerrainChunk(size, height_scale, 0, 0, global_terrain_seed);
+}
+
+// Create a terrain chunk at specified coordinates using the provided seed
+Terrain* createTerrainChunk(float size, float height_scale, int chunk_x, int chunk_z, unsigned int seed) {
     Terrain* terrain = (Terrain*)malloc(sizeof(Terrain));
     if (terrain == NULL) {
-        log_error("Failed to allocate memory for terrain");
+        log_error("Failed to allocate memory for terrain chunk (%d,%d)", chunk_x, chunk_z);
         return NULL;
     }
 
     // Initialize terrain properties
     terrain->size = size;
     terrain->height_scale = height_scale;
+    terrain->chunk_coord.x = chunk_x;
+    terrain->chunk_coord.z = chunk_z;
     
     // Create a simple flat grid for the terrain (21x21 vertices)
     const int resolution = 20; // Number of segments (vertices - 1)
@@ -41,10 +63,14 @@ Terrain* createFlatTerrain(float size, float height_scale) {
     float step = size / resolution;
     int vertex_index = 0;
     
+    // Calculate world position offset for this chunk
+    float chunk_offset_x = chunk_x * size;
+    float chunk_offset_z = chunk_z * size;
+    
     for (int z = 0; z <= resolution; z++) {
         for (int x = 0; x <= resolution; x++) {
-            float px = -half_size + x * step;
-            float pz = -half_size + z * step;
+            float px = -half_size + x * step + chunk_offset_x;
+            float pz = -half_size + z * step + chunk_offset_z;
             float py = 0.0f; // Flat terrain
             
             // Position (xyz)
@@ -113,6 +139,8 @@ Terrain* createFlatTerrain(float size, float height_scale) {
     if (terrain->texture_id == 0) {
         log_warning("Warning: Failed to load terrain texture");
     }
+    
+    log_info("Created terrain chunk at (%d,%d) with seed %u", chunk_x, chunk_z, seed);
     
     return terrain;
 }
