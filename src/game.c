@@ -387,15 +387,22 @@ void createVegetation(int count, float terrain_size) {
     float half_size = terrain_size / 2.0f;
     int current_index = 0;
     
+    // Ground level from terrain settings
+    float ground_level = TERRAIN_POSITION_Y;
+    
     // Create small vegetation (flowers, grass)
     for (int i = 0; i < count_small; i++) {
         vegetation[current_index].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
         vegetation[current_index].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
-        vegetation[current_index].y = -1.5f; // Default ground level
         vegetation[current_index].type = 0;  // Small type
         vegetation[current_index].texture_index = rand() % small_texture_count;
         vegetation[current_index].width = 0.5f + ((float)rand() / RAND_MAX) * 0.5f;
         vegetation[current_index].height = 0.3f + ((float)rand() / RAND_MAX) * 0.3f;
+        
+        // Place vegetation properly on the ground (y position)
+        // We want the bottom of the visible part to be at ground level
+        vegetation[current_index].y = ground_level;
+        
         vegetation[current_index].active = true;
         current_index++;
     }
@@ -404,11 +411,14 @@ void createVegetation(int count, float terrain_size) {
     for (int i = 0; i < count_medium; i++) {
         vegetation[current_index].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
         vegetation[current_index].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
-        vegetation[current_index].y = -1.5f; // Default ground level
         vegetation[current_index].type = 1;  // Medium type
         vegetation[current_index].texture_index = rand() % medium_texture_count;
         vegetation[current_index].width = 1.5f + ((float)rand() / RAND_MAX) * 1.0f;
         vegetation[current_index].height = 1.5f + ((float)rand() / RAND_MAX) * 1.5f;
+        
+        // Place vegetation properly on the ground (y position)
+        vegetation[current_index].y = ground_level;
+        
         vegetation[current_index].active = true;
         current_index++;
     }
@@ -417,11 +427,14 @@ void createVegetation(int count, float terrain_size) {
     for (int i = 0; i < count_big; i++) {
         vegetation[current_index].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
         vegetation[current_index].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
-        vegetation[current_index].y = -1.5f; // Default ground level
         vegetation[current_index].type = 2;  // Big type
         vegetation[current_index].texture_index = rand() % big_texture_count;
         vegetation[current_index].width = 3.0f + ((float)rand() / RAND_MAX) * 2.0f;
         vegetation[current_index].height = 5.0f + ((float)rand() / RAND_MAX) * 3.0f;
+        
+        // Place vegetation properly on the ground (y position)
+        vegetation[current_index].y = ground_level;
+        
         vegetation[current_index].active = true;
         current_index++;
     }
@@ -433,19 +446,14 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     float modelview[16];
     glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
     
-    // Extract the right and up vectors from the modelview matrix
+    // Extract the right vector from the modelview matrix
     float right_x = modelview[0];
-    float right_y = modelview[4];
     float right_z = modelview[8];
-    
-    float up_x = modelview[1];
-    float up_y = modelview[5];
-    float up_z = modelview[9];
     
     // Calculate the four corners of the billboard
     float half_width = width / 2.0f;
     
-    // Fix pivot point to be 10% from the bottom for better ground blending
+    // Calculate pivot point (10% from the bottom for better ground blending)
     float pivot_height = height * 0.1f;
     
     // Enable texturing and blending for transparent billboards
@@ -463,7 +471,7 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glTexCoord2f(0.0f, 1.0f);
     glVertex3f(
         x - right_x * half_width,
-        y - pivot_height, // Offset by pivot height
+        y, // Now at ground level
         z - right_z * half_width
     );
     
@@ -471,7 +479,7 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glTexCoord2f(1.0f, 1.0f);
     glVertex3f(
         x + right_x * half_width,
-        y - pivot_height, // Offset by pivot height
+        y, // Now at ground level
         z + right_z * half_width
     );
     
@@ -479,7 +487,7 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glTexCoord2f(1.0f, 0.0f);
     glVertex3f(
         x + right_x * half_width,
-        y - pivot_height + height, // Offset by pivot height
+        y + height, // Full height above ground
         z + right_z * half_width
     );
     
@@ -487,7 +495,7 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glTexCoord2f(0.0f, 0.0f);
     glVertex3f(
         x - right_x * half_width,
-        y - pivot_height + height, // Offset by pivot height
+        y + height, // Full height above ground
         z - right_z * half_width
     );
     
