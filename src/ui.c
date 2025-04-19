@@ -2,13 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../include/ui.h"
+#include "../include/log.h"
 
 // Initialize UI system
 bool initUI(UISystem* ui, const char* font_path, int font_size, int screen_width, int screen_height) {
     // Initialize SDL_ttf if not already initialized
     if (TTF_WasInit() == 0) {
         if (TTF_Init() == -1) {
-            printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
+            log_error("SDL_ttf could not initialize! SDL_ttf Error: %s", TTF_GetError());
             return false;
         }
     }
@@ -16,7 +17,7 @@ bool initUI(UISystem* ui, const char* font_path, int font_size, int screen_width
     // Load font
     ui->font = TTF_OpenFont(font_path, font_size);
     if (ui->font == NULL) {
-        printf("Failed to load font! SDL_ttf Error: %s\n", TTF_GetError());
+        log_error("Failed to load font! SDL_ttf Error: %s", TTF_GetError());
         return false;
     }
     
@@ -24,7 +25,7 @@ bool initUI(UISystem* ui, const char* font_path, int font_size, int screen_width
     ui->max_elements = 20; // Start with space for 20 elements
     ui->elements = (UIElement*)malloc(ui->max_elements * sizeof(UIElement));
     if (ui->elements == NULL) {
-        printf("Failed to allocate memory for UI elements\n");
+        log_error("Failed to allocate memory for UI elements");
         TTF_CloseFont(ui->font);
         return false;
     }
@@ -33,7 +34,7 @@ bool initUI(UISystem* ui, const char* font_path, int font_size, int screen_width
     ui->screen_width = screen_width;
     ui->screen_height = screen_height;
     
-    printf("UI system initialized successfully with font: %s\n", font_path);
+    log_success("UI system initialized successfully with font: %s", font_path);
     return true;
 }
 
@@ -74,7 +75,7 @@ int createTextElement(UISystem* ui, const char* text, int x, int y, SDL_Color co
         int new_max = ui->max_elements * 2;
         UIElement* new_elements = (UIElement*)realloc(ui->elements, new_max * sizeof(UIElement));
         if (new_elements == NULL) {
-            printf("Failed to reallocate memory for UI elements\n");
+            log_error("Failed to reallocate memory for UI elements");
             return -1;
         }
         ui->elements = new_elements;
@@ -94,14 +95,14 @@ int createTextElement(UISystem* ui, const char* text, int x, int y, SDL_Color co
     // Copy the text
     ui->elements[id].text = strdup(text);
     if (ui->elements[id].text == NULL) {
-        printf("Failed to allocate memory for text\n");
+        log_error("Failed to allocate memory for text");
         return -1;
     }
     
     // Render the text to a texture
     SDL_Surface* text_surface = TTF_RenderText_Blended(ui->font, text, color);
     if (text_surface == NULL) {
-        printf("Unable to render text surface! SDL_ttf Error: %s\n", TTF_GetError());
+        log_error("Unable to render text surface! SDL_ttf Error: %s", TTF_GetError());
         free(ui->elements[id].text);
         return -1;
     }
@@ -123,7 +124,7 @@ int createTextElement(UISystem* ui, const char* text, int x, int y, SDL_Color co
     SDL_Surface* gl_surface = SDL_CreateRGBSurface(0, text_surface->w, text_surface->h, 32, 
                                                   rmask, gmask, bmask, amask);
     if (gl_surface == NULL) {
-        printf("Unable to create RGB surface! SDL Error: %s\n", SDL_GetError());
+        log_error("Unable to create RGB surface! SDL Error: %s", SDL_GetError());
         SDL_FreeSurface(text_surface);
         free(ui->elements[id].text);
         return -1;
@@ -157,7 +158,7 @@ int createTextElement(UISystem* ui, const char* text, int x, int y, SDL_Color co
     // Increment element count
     ui->element_count++;
     
-    printf("Created text element '%s' with ID %d, size: %dx%d\n", 
+    log_success("Created text element '%s' with ID %d, size: %dx%d", 
            text, id, ui->elements[id].width, ui->elements[id].height);
     
     return id;
@@ -166,7 +167,7 @@ int createTextElement(UISystem* ui, const char* text, int x, int y, SDL_Color co
 // Update the text of an existing text element
 void updateTextElement(UISystem* ui, int element_id, const char* text) {
     if (element_id < 0 || element_id >= ui->element_count) {
-        printf("Invalid element ID: %d\n", element_id);
+        log_error("Invalid element ID: %d", element_id);
         return;
     }
     
@@ -185,7 +186,7 @@ void updateTextElement(UISystem* ui, int element_id, const char* text) {
     // Copy new text
     element->text = strdup(text);
     if (element->text == NULL) {
-        printf("Failed to allocate memory for text\n");
+        log_error("Failed to allocate memory for text");
         return;
     }
     
@@ -197,7 +198,7 @@ void updateTextElement(UISystem* ui, int element_id, const char* text) {
     // Render the text to a texture
     SDL_Surface* text_surface = TTF_RenderText_Blended(ui->font, text, element->color);
     if (text_surface == NULL) {
-        printf("Unable to render text surface! SDL_ttf Error: %s\n", TTF_GetError());
+        log_error("Unable to render text surface! SDL_ttf Error: %s", TTF_GetError());
         return;
     }
     
@@ -218,7 +219,7 @@ void updateTextElement(UISystem* ui, int element_id, const char* text) {
     SDL_Surface* gl_surface = SDL_CreateRGBSurface(0, text_surface->w, text_surface->h, 32, 
                                                   rmask, gmask, bmask, amask);
     if (gl_surface == NULL) {
-        printf("Unable to create RGB surface! SDL Error: %s\n", SDL_GetError());
+        log_error("Unable to create RGB surface! SDL Error: %s", SDL_GetError());
         SDL_FreeSurface(text_surface);
         return;
     }
@@ -252,7 +253,7 @@ void updateTextElement(UISystem* ui, int element_id, const char* text) {
 // Update the color of an existing text element
 void updateTextColor(UISystem* ui, int element_id) {
     if (element_id < 0 || element_id >= ui->element_count) {
-        printf("Invalid element ID: %d\n", element_id);
+        log_error("Invalid element ID: %d", element_id);
         return;
     }
     
@@ -267,7 +268,7 @@ void updateTextColor(UISystem* ui, int element_id) {
     // Create a new SDL text surface with the current color
     SDL_Surface* text_surface = TTF_RenderText_Blended(ui->font, element->text, element->color);
     if (text_surface == NULL) {
-        printf("Failed to render text with new color! SDL_ttf Error: %s\n", TTF_GetError());
+        log_error("Failed to render text with new color! SDL_ttf Error: %s", TTF_GetError());
         return;
     }
     
@@ -288,7 +289,7 @@ void updateTextColor(UISystem* ui, int element_id) {
     SDL_Surface* gl_surface = SDL_CreateRGBSurface(0, text_surface->w, text_surface->h, 32,
                                                  rmask, gmask, bmask, amask);
     if (gl_surface == NULL) {
-        printf("Failed to create RGB surface! SDL Error: %s\n", SDL_GetError());
+        log_error("Failed to create RGB surface! SDL Error: %s", SDL_GetError());
         SDL_FreeSurface(text_surface);
         return;
     }
@@ -322,7 +323,7 @@ void updateTextColor(UISystem* ui, int element_id) {
 // Set element visibility
 void setElementVisibility(UISystem* ui, int element_id, bool visible) {
     if (element_id < 0 || element_id >= ui->element_count) {
-        printf("Invalid element ID: %d\n", element_id);
+        log_error("Invalid element ID: %d", element_id);
         return;
     }
     
@@ -332,7 +333,7 @@ void setElementVisibility(UISystem* ui, int element_id, bool visible) {
 // Set element position
 void setElementPosition(UISystem* ui, int element_id, int x, int y) {
     if (element_id < 0 || element_id >= ui->element_count) {
-        printf("Invalid element ID: %d\n", element_id);
+        log_error("Invalid element ID: %d", element_id);
         return;
     }
     
@@ -343,7 +344,7 @@ void setElementPosition(UISystem* ui, int element_id, int x, int y) {
 // Set element color
 void setElementColor(UISystem* ui, int element_id, SDL_Color color) {
     if (element_id < 0 || element_id >= ui->element_count) {
-        printf("Invalid element ID: %d\n", element_id);
+        log_error("Invalid element ID: %d", element_id);
         return;
     }
     
@@ -399,7 +400,7 @@ void repositionUI(UISystem* ui, int new_width, int new_height) {
     ui->screen_width = new_width;
     ui->screen_height = new_height;
     
-    printf("UI repositioned for new resolution: %dx%d\n", new_width, new_height);
+    log_success("UI repositioned for new resolution: %dx%d", new_width, new_height);
 }
 
 // Render all visible UI elements

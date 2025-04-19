@@ -5,17 +5,18 @@
 #include <GL/glu.h>
 #include "../include/player.h"
 #include "../include/config.h"
+#include "../include/log.h"
 #include "../stb_image.h" // Include stb_image for texture loading
 
 // Load weapon texture from file
 void loadWeaponTexture(Player *player, const char* texture_path) {
-    printf("Loading weapon texture from: %s\n", texture_path);
+    log_info("Loading weapon texture from: %s", texture_path);
     
     int width, height, channels;
     unsigned char *image = stbi_load(texture_path, &width, &height, &channels, STBI_rgb_alpha);
     
     if (!image) {
-        printf("Error loading weapon texture: %s\n", stbi_failure_reason());
+        log_error("Error loading weapon texture: %s", stbi_failure_reason());
         return;
     }
     
@@ -40,7 +41,7 @@ void loadWeaponTexture(Player *player, const char* texture_path) {
     // Free the image data as it's now in GPU memory
     stbi_image_free(image);
     
-    printf("Weapon texture loaded successfully, ID: %u\n", player->weapon_texture_id);
+    log_success("Weapon texture loaded successfully, ID: %u", player->weapon_texture_id);
 }
 
 // Update weapon animation state
@@ -98,7 +99,7 @@ void startCuttingFoliage(Player *player) {
         loadWeaponTexture(player, PLAYER_WEAPON_TEXTURE_0);
         
         // Log that we're cutting
-        printf("Player is cutting foliage\n");
+        log_info("Player is cutting foliage");
     }
 }
 
@@ -208,7 +209,7 @@ void cleanupPlayer(Player *player) {
     if (player->weapon_texture_id != 0) {
         glDeleteTextures(1, &player->weapon_texture_id);
         player->weapon_texture_id = 0;
-        printf("Weapon texture released\n");
+        log_info("Weapon texture released");
     }
 }
 

@@ -16,6 +16,7 @@
 #include "../include/model.h"
 #include "../include/config.h"
 #include "../include/particles.h"
+#include "../include/log.h"
 
 // For the input system
 static InputState input;
@@ -49,7 +50,7 @@ static int big_texture_count = 0;
 bool initAudio(AudioSystem* audio) {
     // Initialize SDL_mixer
     if (Mix_OpenAudio(AUDIO_FREQUENCY, AUDIO_FORMAT, AUDIO_CHANNELS, AUDIO_CHUNKSIZE) < 0) {
-        printf("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
+        logError("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
         audio->initialized = false;
         return false;
     }
@@ -67,9 +68,9 @@ bool initAudio(AudioSystem* audio) {
     // Load menu music separately
     audio->menu_music = Mix_LoadMUS(MENU_MUSIC_FILE);
     if (!audio->menu_music) {
-        printf("Failed to load menu music! SDL_mixer Error: %s\n", Mix_GetError());
+        logError("Failed to load menu music! SDL_mixer Error: %s\n", Mix_GetError());
     } else {
-        printf("Menu music loaded successfully: %s\n", MENU_MUSIC_FILE);
+        logInfo("Menu music loaded successfully: %s\n", MENU_MUSIC_FILE);
     }
     
     // Load all music tracks
@@ -77,10 +78,10 @@ bool initAudio(AudioSystem* audio) {
     for (int i = 0; i < audio->num_tracks; i++) {
         audio->music_tracks[i] = Mix_LoadMUS(audio->music_filenames[i]);
         if (!audio->music_tracks[i]) {
-            printf("Failed to load music track %d (%s)! SDL_mixer Error: %s\n", 
+            logError("Failed to load music track %d (%s)! SDL_mixer Error: %s\n", 
                    i, audio->music_filenames[i], Mix_GetError());
         } else {
-            printf("Music track %d loaded successfully: %s\n", i, audio->music_filenames[i]);
+            logInfo("Music track %d loaded successfully: %s\n", i, audio->music_filenames[i]);
             loaded_at_least_one = true;
         }
     }
@@ -121,14 +122,14 @@ bool playMusicTrack(AudioSystem* audio, int track_index) {
         
         // Play the track
         if (Mix_PlayMusic(audio->music_tracks[track_index], -1) == -1) {
-            printf("Failed to play music track %d! SDL_mixer Error: %s\n", 
+            logError("Failed to play music track %d! SDL_mixer Error: %s\n", 
                    track_index, Mix_GetError());
             audio->music_playing = false;
             return false;
         } else {
             audio->current_track = track_index;
             audio->music_playing = true;
-            printf("Playing music track %d: %s\n", 
+            logInfo("Playing music track %d: %s\n", 
                    track_index, audio->music_filenames[track_index]);
             return true;
         }
@@ -147,14 +148,14 @@ bool playMenuMusic(AudioSystem* audio) {
         
         // Play menu music
         if (Mix_PlayMusic(audio->menu_music, -1) == -1) {
-            printf("Failed to play menu music! SDL_mixer Error: %s\n", Mix_GetError());
+            logError("Failed to play menu music! SDL_mixer Error: %s\n", Mix_GetError());
             audio->music_playing = false;
             audio->in_menu_music = false;
             return false;
         } else {
             audio->music_playing = true;
             audio->in_menu_music = true;
-            printf("Playing menu music\n");
+            logInfo("Playing menu music\n");
             return true;
         }
     }
@@ -314,9 +315,9 @@ bool loadVegetationTextures() {
         
         vegetation_textures_small[small_texture_count] = loadTexture(small_textures[i]);
         if (vegetation_textures_small[small_texture_count] == 0) {
-            printf("Warning: Failed to load small vegetation texture: %s\n", small_textures[i]);
+            logWarning("Warning: Failed to load small vegetation texture: %s\n", small_textures[i]);
         } else {
-            printf("Loaded small vegetation texture %d: %s\n", small_texture_count, small_textures[i]);
+            logInfo("Loaded small vegetation texture %d: %s\n", small_texture_count, small_textures[i]);
             small_texture_count++;
         }
     }
@@ -328,9 +329,9 @@ bool loadVegetationTextures() {
         
         vegetation_textures_medium[medium_texture_count] = loadTexture(medium_textures[i]);
         if (vegetation_textures_medium[medium_texture_count] == 0) {
-            printf("Warning: Failed to load medium vegetation texture: %s\n", medium_textures[i]);
+            logWarning("Warning: Failed to load medium vegetation texture: %s\n", medium_textures[i]);
         } else {
-            printf("Loaded medium vegetation texture %d: %s\n", medium_texture_count, medium_textures[i]);
+            logInfo("Loaded medium vegetation texture %d: %s\n", medium_texture_count, medium_textures[i]);
             medium_texture_count++;
         }
     }
@@ -342,15 +343,15 @@ bool loadVegetationTextures() {
         
         vegetation_textures_big[big_texture_count] = loadTexture(big_textures[i]);
         if (vegetation_textures_big[big_texture_count] == 0) {
-            printf("Warning: Failed to load big vegetation texture: %s\n", big_textures[i]);
+            logWarning("Warning: Failed to load big vegetation texture: %s\n", big_textures[i]);
         } else {
-            printf("Loaded big vegetation texture %d: %s\n", big_texture_count, big_textures[i]);
+            logInfo("Loaded big vegetation texture %d: %s\n", big_texture_count, big_textures[i]);
             big_texture_count++;
         }
     }
     
     if (small_texture_count == 0 || medium_texture_count == 0 || big_texture_count == 0) {
-        printf("Error: Failed to load any vegetation textures in at least one category.\n");
+        logError("Error: Failed to load any vegetation textures in at least one category.\n");
         return false;
     }
     
@@ -378,13 +379,13 @@ void createVegetation(int count, float terrain_size) {
     if (count_big > TERRAIN_MAX_FEATURES_BIG) count_big = TERRAIN_MAX_FEATURES_BIG;
     
     // Print debug information about density calculations
-    printf("Vegetation density calculations:\n");
-    printf("  Base count: %d\n", base_count);
-    printf("  Small vegetation: %d × %.1f = %d (max: %d)\n", 
+    logInfo("Vegetation density calculations:\n");
+    logInfo("  Base count: %d\n", base_count);
+    logInfo("  Small vegetation: %d × %.1f = %d (max: %d)\n", 
            base_count, VEGETATION_DENSITY_SMALL, count_small, TERRAIN_MAX_FEATURES_SMALL);
-    printf("  Medium vegetation: %d × %.1f = %d (max: %d)\n", 
+    logInfo("  Medium vegetation: %d × %.1f = %d (max: %d)\n", 
            base_count, VEGETATION_DENSITY_MEDIUM, count_medium, TERRAIN_MAX_FEATURES_MEDIUM);
-    printf("  Big vegetation: %d × %.1f = %d (max: %d)\n", 
+    logInfo("  Big vegetation: %d × %.1f = %d (max: %d)\n", 
            base_count, VEGETATION_DENSITY_BIG, count_big, TERRAIN_MAX_FEATURES_BIG);
     
     // Total vegetation count
@@ -394,11 +395,11 @@ void createVegetation(int count, float terrain_size) {
     // Allocate memory for vegetation
     vegetation = (Vegetation*)malloc(sizeof(Vegetation) * vegetation_count);
     if (vegetation == NULL) {
-        printf("Failed to allocate memory for vegetation\n");
+        logError("Failed to allocate memory for vegetation\n");
         return;
     }
     
-    printf("Creating %d vegetation objects: %d small, %d medium, %d big\n", 
+    logInfo("Creating %d vegetation objects: %d small, %d medium, %d big\n", 
            total_count, count_small, count_medium, count_big);
     
     // Create random vegetation
@@ -632,7 +633,7 @@ void cutMediumFoliage(Player* player) {
                     
                     // Deactivate the vegetation (cut it)
                     vegetation[i].active = false;
-                    printf("Cut medium foliage at position (%f, %f, %f)\n", 
+                    logInfo("Cut medium foliage at position (%f, %f, %f)\n", 
                            vegetation[i].x, vegetation[i].y, vegetation[i].z);
                 }
             }
@@ -663,7 +664,7 @@ bool initGame(GameState* game) {
     
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
-        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        logError("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
     
@@ -687,20 +688,20 @@ bool initGame(GameState* game) {
     );
     
     if (game->window == NULL) {
-        printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        logError("Window could not be created! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
     
     // Create OpenGL context
     game->gl_context = SDL_GL_CreateContext(game->window);
     if (game->gl_context == NULL) {
-        printf("OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
+        logError("OpenGL context could not be created! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
     
     // Use Vsync
     if (SDL_GL_SetSwapInterval(1) < 0) {
-        printf("Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError());
+        logWarning("Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError());
     }
     
     // Initialize OpenGL
@@ -738,7 +739,7 @@ bool initGame(GameState* game) {
     
     // Load vegetation textures
     if (!loadVegetationTextures()) {
-        printf("Failed to load vegetation textures\n");
+        logError("Failed to load vegetation textures\n");
         return false;
     }
     
@@ -751,29 +752,29 @@ bool initGame(GameState* game) {
     
     // Initialize UI system with smaller font size for game UI
     if (!initUI(&game->game_ui, GAME_FONT_FILE, GAME_UI_FONT_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT)) {
-        printf("Failed to initialize game UI system\n");
+        logError("Failed to initialize game UI system\n");
         return false;
     } else {
-        printf("Game UI system initialized successfully with font: %s (size %d)\n", 
+        logInfo("Game UI system initialized successfully with font: %s (size %d)\n", 
                GAME_FONT_FILE, GAME_UI_FONT_SIZE);
     }
     
     // Initialize UI system with larger font size for menu UI
     if (!initUI(&game->menu_ui, GAME_FONT_FILE, MENU_FONT_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT)) {
-        printf("Failed to initialize menu UI system\n");
+        logError("Failed to initialize menu UI system\n");
         cleanupUI(&game->game_ui);
         return false;
     } else {
-        printf("Menu UI system initialized successfully with font: %s (size %d)\n", 
+        logInfo("Menu UI system initialized successfully with font: %s (size %d)\n", 
                GAME_FONT_FILE, MENU_FONT_SIZE);
     }
     
     // Initialize audio system
     if (!initAudio(&game->audio)) {
-        printf("Failed to initialize audio system\n");
+        logError("Failed to initialize audio system\n");
         return false;
     } else {
-        printf("Audio system initialized successfully\n");
+        logInfo("Audio system initialized successfully\n");
     }
     
     // Create UI elements

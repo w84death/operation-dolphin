@@ -6,13 +6,14 @@
 #include <string.h>  // Added for string handling
 #include "../include/terrain.h"
 #include "../include/config.h"
+#include "../include/log.h"
 #include "../stb_image.h"
 
 // Create a flat terrain with a simple texture
 Terrain* createFlatTerrain(float size, float height_scale) {
     Terrain* terrain = (Terrain*)malloc(sizeof(Terrain));
     if (terrain == NULL) {
-        printf("Failed to allocate memory for terrain\n");
+        log_error("Failed to allocate memory for terrain");
         return NULL;
     }
 
@@ -30,7 +31,7 @@ Terrain* createFlatTerrain(float size, float height_scale) {
     terrain->indices = (unsigned int*)malloc(terrain->index_count * sizeof(unsigned int));
     
     if (terrain->vertices == NULL || terrain->indices == NULL) {
-        printf("Failed to allocate memory for terrain data\n");
+        log_error("Failed to allocate memory for terrain data");
         free(terrain);
         return NULL;
     }
@@ -110,7 +111,7 @@ Terrain* createFlatTerrain(float size, float height_scale) {
     // Load a ground texture
     terrain->texture_id = loadTexture("textures/terrain/ground.tga");
     if (terrain->texture_id == 0) {
-        printf("Warning: Failed to load terrain texture\n");
+        log_warning("Warning: Failed to load terrain texture");
     }
     
     return terrain;
@@ -167,14 +168,14 @@ GLuint loadTexture(const char* filename) {
     char* base_path = SDL_GetBasePath();
 
     if (!base_path) {
-        printf("Error: SDL_GetBasePath() failed: %s\n", SDL_GetError());
+        log_error("Error: SDL_GetBasePath() failed: %s", SDL_GetError());
         // Fallback: Try loading relative to the current working directory
         snprintf(full_path, sizeof(full_path), "%s", filename);
-        printf("Warning: SDL_GetBasePath failed. Trying relative path from CWD: %s\n", full_path);
+        log_warning("Warning: SDL_GetBasePath failed. Trying relative path from CWD: %s", full_path);
     } else {
         // Construct path relative to the executable
         snprintf(full_path, sizeof(full_path), "%s%s", base_path, filename);
-        printf("Attempting to load texture relative to executable: %s\n", full_path);
+        log_info("Attempting to load texture relative to executable: %s", full_path);
         SDL_free(base_path); // Free the path returned by SDL
     }
 
@@ -183,14 +184,14 @@ GLuint loadTexture(const char* filename) {
     unsigned char* image = stbi_load(full_path, &width, &height, &channels, STBI_rgb_alpha);
 
     if (!image) {
-        printf("Failed to load texture image: %s\n", full_path);
+        log_error("Failed to load texture image: %s", full_path);
         // Add stbi_failure_reason() for more details
-        printf("stb_image error: %s\n", stbi_failure_reason()); 
+        log_error("stb_image error: %s", stbi_failure_reason()); 
         return 0; // Return 0 if load failed
     }
 
     // If image loaded successfully:
-    printf("Successfully loaded texture image: %s (%dx%d, %d channels originally, loaded as RGBA)\n", full_path, width, height, channels);
+    log_info("Successfully loaded texture image: %s (%dx%d, %d channels originally, loaded as RGBA)", full_path, width, height, channels);
 
     // Create OpenGL texture
     glGenTextures(1, &texture_id);
@@ -208,7 +209,7 @@ GLuint loadTexture(const char* filename) {
     // Free image data
     stbi_image_free(image);
 
-    printf("Successfully created OpenGL texture for: %s\n", full_path);
+    log_info("Successfully created OpenGL texture for: %s", full_path);
 
     return texture_id;
 }
