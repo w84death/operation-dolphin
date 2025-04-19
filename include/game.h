@@ -74,6 +74,13 @@ typedef struct {
     
     int fps_text_id;
     
+    // Compass UI elements
+    int compass_n_id;
+    int compass_e_id;
+    int compass_s_id;
+    int compass_w_id;
+    int compass_indicator_id;
+    
     // Menu system
     MenuState menu_state;
     int selected_menu_item;

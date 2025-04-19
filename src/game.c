@@ -785,8 +785,44 @@ bool initGame(GameState* game) {
     // Create FPS text
     game->fps_text_id = createTextElement(&game->game_ui, "FPS: 0", WINDOW_WIDTH - 20, 20, primary_color, TEXT_ALIGN_RIGHT);
     
+    // Create compass UI elements
+    int compass_center_x = WINDOW_WIDTH / 2;
+    // North indicator
+    game->compass_n_id = createTextElement(&game->game_ui, COMPASS_NORTH, 
+                                          compass_center_x, COMPASS_Y_POSITION, 
+                                          primary_color, TEXT_ALIGN_CENTER);
+    
+    // East indicator
+    game->compass_e_id = createTextElement(&game->game_ui, COMPASS_EAST, 
+                                         compass_center_x + COMPASS_WIDTH/2 - COMPASS_CARDINAL_WIDTH/2, 
+                                         COMPASS_Y_POSITION, 
+                                         primary_color, TEXT_ALIGN_CENTER);
+    
+    // South indicator
+    game->compass_s_id = createTextElement(&game->game_ui, COMPASS_SOUTH, 
+                                         compass_center_x, COMPASS_Y_POSITION + COMPASS_HEIGHT, 
+                                         primary_color, TEXT_ALIGN_CENTER);
+    
+    // West indicator
+    game->compass_w_id = createTextElement(&game->game_ui, COMPASS_WEST, 
+                                         compass_center_x - COMPASS_WIDTH/2 + COMPASS_CARDINAL_WIDTH/2, 
+                                         COMPASS_Y_POSITION, 
+                                         primary_color, TEXT_ALIGN_CENTER);
+    
+    // Indicator line (this will be a simple "-" positioned according to player direction)
+    game->compass_indicator_id = createTextElement(&game->game_ui, "o", 
+                                                 compass_center_x, COMPASS_Y_POSITION + COMPASS_LINE_HEIGHT, 
+                                                 secondary_color, TEXT_ALIGN_CENTER);
+    
     // Hide game UI initially (will be shown when game starts)
     setElementVisibility(&game->game_ui, game->fps_text_id, false);
+    
+    // Hide compass UI elements initially
+    setElementVisibility(&game->game_ui, game->compass_n_id, false);
+    setElementVisibility(&game->game_ui, game->compass_e_id, false);
+    setElementVisibility(&game->game_ui, game->compass_s_id, false);
+    setElementVisibility(&game->game_ui, game->compass_w_id, false);
+    setElementVisibility(&game->game_ui, game->compass_indicator_id, false);
     
     // Initialize menu system
     initMenu(game);
@@ -1001,6 +1037,13 @@ void updateMenuUI(GameState* game) {
     // Show/hide game UI based on whether the game is running
     bool show_game_ui = (game->menu_state == MENU_NONE && game->game_started);
     setElementVisibility(&game->game_ui, game->fps_text_id, show_game_ui);
+    
+    // Show/hide compass UI elements
+    setElementVisibility(&game->game_ui, game->compass_n_id, show_game_ui);
+    setElementVisibility(&game->game_ui, game->compass_e_id, show_game_ui);
+    setElementVisibility(&game->game_ui, game->compass_s_id, show_game_ui);
+    setElementVisibility(&game->game_ui, game->compass_w_id, show_game_ui);
+    setElementVisibility(&game->game_ui, game->compass_indicator_id, show_game_ui);
 }
 
 // Handle menu navigation and selection
@@ -1414,6 +1457,9 @@ void updateGame(GameState* game, float delta_time) {
         
         // Update day-night cycle
         updateDayNightCycle(delta_time);
+        
+        // Update compass UI
+        updateCompassUI(game);
     }
     
     // Always update music system
@@ -1551,4 +1597,33 @@ void cleanupGame(GameState* game) {
     SDL_GL_DeleteContext(game->gl_context);
     SDL_DestroyWindow(game->window);
     SDL_Quit();
+}
+
+// Update compass UI based on player's direction
+void updateCompassUI(GameState* game) {
+    if (game->menu_state == MENU_NONE && game->game_started) {
+        int compass_center_x = WINDOW_WIDTH / 2;
+        
+        // Calculate the position of the compass indicator based on player's yaw
+        float relative_angle = game->player.yaw;
+        
+        // Normalize between 0-360 degrees
+        while (relative_angle < 0) relative_angle += 360.0f;
+        while (relative_angle >= 360) relative_angle -= 360.0f;
+        
+        // Convert to a position in the compass UI (-1 to +1 range, where 0 is north)
+        float position = relative_angle / 180.0f - 1.0f; // Maps 0-360 to -1 to 1
+        
+        // Calculate the X position on screen for the indicator
+        int indicator_x = compass_center_x + (int)(position * COMPASS_WIDTH/2);
+        
+        // Ensure the indicator stays within compass bounds
+        if (indicator_x < compass_center_x - COMPASS_WIDTH/2) 
+            indicator_x = compass_center_x - COMPASS_WIDTH/2;
+        if (indicator_x > compass_center_x + COMPASS_WIDTH/2) 
+            indicator_x = compass_center_x + COMPASS_WIDTH/2;
+            
+        // Update the compass indicator position
+        setElementPosition(&game->game_ui, game->compass_indicator_id, indicator_x, COMPASS_Y_POSITION + COMPASS_LINE_HEIGHT);
+    }
 }
