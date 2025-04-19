@@ -2,6 +2,8 @@
 
 Operation Dolphin: Echoes of the Mesozoic blends the chaos of the Vietnam War with genetically engineered dinosaurs, creating a pulpy, adrenaline-fueled narrative. Set in 1968, you play as Captain Jack "Marlin" Kowalski, a MACV-SOG operative tasked with infiltrating a CIA black site codenamed Warehouse X-Ray deep in the Annamite jungles of Laos. The mission: recover Project DOLPHIN's classified files—a blueprint for weaponized dinosaurs engineered to destabilize North Vietnamese supply lines along the Ho Chi Minh Trail.
 
+![Gameplay Screenshot](media/gameplay.png)
+
 ## Gameplay
 
 Operation Dolphin is a classic "boomershooter" in the tradition of 90s FPS games. Fast-paced, straightforward gameplay focuses on movement and shooting rather than cover systems or regenerating health. Players navigate through lush jungle environments while facing off against various engineered dinosaur threats.
@@ -26,6 +28,18 @@ The CIA's Phoenix Program secretly expanded into bioweapon research after discov
 - **Project DOLPHIN's Master File**: Details genetic modifications, control protocols, and a list of embedded double agents in Hanoi's politburo.
 
 - **Agent Orange-X**: A mutagenic variant that accelerated dinosaur growth, causing erratic behavior and Baryonyx packs to stalk U.S. patrols.
+
+## Game Features
+
+![Main Menu](media/menu.png)
+
+- **Classic FPS Combat**: Armed with your trusty machete, navigate through dense jungle environments while facing off against engineered prehistoric threats
+- **Day-Night Cycle**: Experience dynamic lighting as the time of day changes, affecting visibility and atmosphere
+- **Retro UI**: Clean, minimalist interface that keeps you focused on the action
+- **Dynamic Vegetation**: Slash through the undergrowth with your machete to clear paths through the dense jungle
+- **Atmospheric Audio**: Period-appropriate soundtrack that enhances the tense jungle atmosphere
+
+![Console Output](media/log.png)
 
 ## Minimum Hardware Requirements
 
