@@ -4,8 +4,8 @@
 // Window settings
 #define WINDOW_WIDTH 640
 #define WINDOW_HEIGHT 480
-#define WINDOW_TITLE "OPERATION DOLPHIN"
-#define GAME_MENU_TITLE "- O P E R A T I O N - D O L P H I N -"
+#define WINDOW_TITLE "OPERATION DOLPHIN by P1X"
+#define GAME_MENU_TITLE "OPERATION DOLPHIN"
 #define GAME_MENU_RESUME "RESUME GAME"
 #define GAME_MENU_NEWGAME "NEW GAME"
 #define GAME_MENU_SETTINGS "SETTINGS"
@@ -54,6 +54,11 @@
 #define CAMERA_NEAR 0.1f
 #define CAMERA_FAR FOG_END + 10.0f
 
+// Menu camera position (elevated position for menu view)
+#define MENU_CAMERA_HEIGHT 4.5f
+#define MENU_CAMERA_PITCH 5.0f  // Look down at terrain
+#define MENU_CAMERA_ROTATION_SPEED 0.005f
+
 // Player settings
 #define PLAYER_POSITION_X 0.0f
 #define PLAYER_POSITION_Y 0.0f
@@ -75,9 +80,9 @@
 #define TERRAIN_MAX_FEATURES 200
 
 // Billboard vegetation settings
-#define VEGETATION_DENSITY_SMALL 500.0f  // Multiplier for small vegetation
-#define VEGETATION_DENSITY_MEDIUM 50.0f  // Multiplier for medium vegetation
-#define VEGETATION_DENSITY_BIG 5.0f  // Multiplier for big vegetation
+#define VEGETATION_DENSITY_SMALL 20.0f  // Multiplier for small vegetation
+#define VEGETATION_DENSITY_MEDIUM 5.0f  // Multiplier for medium vegetation
+#define VEGETATION_DENSITY_BIG 2.0f  // Multiplier for big vegetation
 #define TERRAIN_MAX_FEATURES_SMALL 5000  // Small vegetation count
 #define TERRAIN_MAX_FEATURES_MEDIUM 500  // Medium vegetation count
 #define TERRAIN_MAX_FEATURES_BIG 250  // Big vegetation count

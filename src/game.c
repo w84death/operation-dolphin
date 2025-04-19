@@ -1184,16 +1184,32 @@ void renderGame(GameState* game) {
     glLoadIdentity();
     
     // First-person camera setup using player's position and rotation
-    // Apply player pitch rotation
-    glRotatef(game->player.pitch, 1.0f, 0.0f, 0.0f);
-    
-    // Apply player yaw rotation
-    glRotatef(game->player.yaw, 0.0f, 1.0f, 0.0f);
-    
-    // Translate to negative of player position
-    glTranslatef(-game->player.position_x, 
-                -game->player.position_y, 
-                -game->player.position_z);
+    if (game->menu_state == MENU_NONE && game->game_started) {
+        // In-game camera - use player's position and orientation
+        // Apply player pitch rotation
+        glRotatef(game->player.pitch, 1.0f, 0.0f, 0.0f);
+        
+        // Apply player yaw rotation
+        glRotatef(game->player.yaw, 0.0f, 1.0f, 0.0f);
+        
+        // Translate to negative of player position
+        glTranslatef(-game->player.position_x, 
+                    -game->player.position_y, 
+                    -game->player.position_z);
+    } else {
+        // Menu camera - show elevated view of the jungle
+        // Use fmodf for floating point modulo operation
+        float cam_yaw = fmodf((SDL_GetTicks() * MENU_CAMERA_ROTATION_SPEED), 360.0f); // Slowly rotate camera
+        
+        // Apply pitch to look down at terrain
+        glRotatef(MENU_CAMERA_PITCH, 1.0f, 0.0f, 0.0f);
+        
+        // Apply rotating yaw for a nice overview effect
+        glRotatef(cam_yaw, 0.0f, 1.0f, 0.0f);
+        
+        // Position high above the terrain
+        glTranslatef(0.0f, -MENU_CAMERA_HEIGHT, 0.0f);
+    }
     
     // Setup lighting based on time of day
     setupLightingForTimeOfDay(current_tod);
