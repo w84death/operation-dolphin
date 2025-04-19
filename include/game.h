@@ -24,7 +24,8 @@ typedef enum {
 typedef struct {
     bool sound_enabled;
     bool high_terrain_features;
-    bool invert_y_axis;  // New setting for Y-axis inversion
+    bool invert_y_axis;  // Y-axis inversion setting
+    bool fullscreen;     // Fullscreen toggle setting
 } GameSettings;
 
 // Audio structure for managing game audio
@@ -82,8 +83,8 @@ typedef struct {
     // Menu UI elements
     int menu_title_id;
     int menu_items[6];
-    int settings_items[3]; // Increased from 2 to 3 to accommodate invert Y axis setting
-    int settings_values[3]; // Increased from 2 to 3 to accommodate invert Y axis setting
+    int settings_items[4]; // Increased from 3 to 4 to accommodate fullscreen setting
+    int settings_values[4]; // Increased from 3 to 4 to accommodate fullscreen setting
 
     // Audio system
     AudioSystem audio;

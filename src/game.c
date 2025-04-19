@@ -835,6 +835,7 @@ void initMenu(GameState* game) {
     game->settings.sound_enabled = true;
     game->settings.high_terrain_features = true;
     game->settings.invert_y_axis = MOUSE_INVERT_Y_DEFAULT;  // Initialize with default from config
+    game->settings.fullscreen = game->fullscreen; // Initialize with current fullscreen state
     
     // Start playing menu music if sound is enabled
     if (game->settings.sound_enabled) {
@@ -868,34 +869,44 @@ void initMenu(GameState* game) {
     
     // Create settings menu items (initially hidden)
     game->settings_items[0] = createTextElement(&game->menu_ui, GAME_SETTINGS_QUALITY, 
-                                              WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2, 
+                                              WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 - 60, 
                                               primary_color, TEXT_ALIGN_RIGHT);
     
     game->settings_items[1] = createTextElement(&game->menu_ui, GAME_SETTINGS_SOUND, 
+                                              WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2, 
+                                              primary_color, TEXT_ALIGN_RIGHT);
+                                              
+    // Add invert Y axis setting
+    game->settings_items[2] = createTextElement(&game->menu_ui, GAME_SETTINGS_INVERT, 
                                               WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 60, 
                                               primary_color, TEXT_ALIGN_RIGHT);
                                               
-    // Add new invert Y axis setting
-    game->settings_items[2] = createTextElement(&game->menu_ui, GAME_SETTINGS_INVERT, 
+    // Add fullscreen toggle setting
+    game->settings_items[3] = createTextElement(&game->menu_ui, "FULLSCREEN", 
                                               WINDOW_WIDTH / 2 - 100, WINDOW_HEIGHT / 2 + 120, 
                                               primary_color, TEXT_ALIGN_RIGHT);
     
     // Create settings values (initially hidden)
     game->settings_values[0] = createTextElement(&game->menu_ui, GAME_SETTINGS_HIGH, 
-                                               WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2, 
+                                               WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2 - 60, 
                                                primary_color, TEXT_ALIGN_LEFT);
     
     game->settings_values[1] = createTextElement(&game->menu_ui, "ON", 
+                                               WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2, 
+                                               primary_color, TEXT_ALIGN_LEFT);
+                                               
+    // Add invert Y axis value
+    game->settings_values[2] = createTextElement(&game->menu_ui, "OFF", 
                                                WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2 + 60, 
                                                primary_color, TEXT_ALIGN_LEFT);
                                                
-    // Add new invert Y axis value
-    game->settings_values[2] = createTextElement(&game->menu_ui, "OFF", 
+    // Add fullscreen toggle value
+    game->settings_values[3] = createTextElement(&game->menu_ui, "OFF", 
                                                WINDOW_WIDTH / 2 + 100, WINDOW_HEIGHT / 2 + 120, 
                                                primary_color, TEXT_ALIGN_LEFT);
     
     // Hide settings menu initially
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         setElementVisibility(&game->menu_ui, game->settings_items[i], false);
         setElementVisibility(&game->menu_ui, game->settings_values[i], false);
     }
@@ -932,8 +943,8 @@ void updateMenuUI(GameState* game) {
             }
         }
         
-        // Hide settings menu
-        for (int i = 0; i < 3; i++) {
+        // Hide all settings menu items (both labels and values)
+        for (int i = 0; i < 4; i++) {
             setElementVisibility(&game->menu_ui, game->settings_items[i], false);
             setElementVisibility(&game->menu_ui, game->settings_values[i], false);
         }
@@ -947,8 +958,8 @@ void updateMenuUI(GameState* game) {
             setElementVisibility(&game->menu_ui, game->menu_items[i], false);
         }
         
-        // Show settings items
-        for (int i = 0; i < 3; i++) {
+        // Show all settings items - including fullscreen which is only visible in settings
+        for (int i = 0; i < 4; i++) {
             setElementVisibility(&game->menu_ui, game->settings_items[i], true);
             setElementVisibility(&game->menu_ui, game->settings_values[i], true);
             
@@ -969,6 +980,8 @@ void updateMenuUI(GameState* game) {
                           game->settings.sound_enabled ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
         updateTextElement(&game->menu_ui, game->settings_values[2], 
                           game->settings.invert_y_axis ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
+        updateTextElement(&game->menu_ui, game->settings_values[3], 
+                          game->settings.fullscreen ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
     }
     else if (game->menu_state == MENU_NONE) {
         // Game is running, hide all menu elements
@@ -978,7 +991,8 @@ void updateMenuUI(GameState* game) {
             setElementVisibility(&game->menu_ui, game->menu_items[i], false);
         }
         
-        for (int i = 0; i < 3; i++) {
+        // Hide all settings items
+        for (int i = 0; i < 4; i++) {
             setElementVisibility(&game->menu_ui, game->settings_items[i], false);
             setElementVisibility(&game->menu_ui, game->settings_values[i], false);
         }
@@ -1087,7 +1101,7 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                 // Move selection up in the settings menu
                 game->selected_menu_item--;
                 if (game->selected_menu_item < 0) {
-                    game->selected_menu_item = 2; // Settings has 3 items (0, 1, 2)
+                    game->selected_menu_item = 3; // Settings has 4 items (0, 1, 2, 3)
                 }
                 updateMenuUI(game);
                 break;
@@ -1095,7 +1109,7 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
             case SDLK_DOWN:
                 // Move selection down in the settings menu
                 game->selected_menu_item++;
-                if (game->selected_menu_item > 2) {
+                if (game->selected_menu_item > 3) {
                     game->selected_menu_item = 0;
                 }
                 updateMenuUI(game);
@@ -1130,6 +1144,76 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                     case 2: // INVERT Y AXIS
                         game->settings.invert_y_axis = !game->settings.invert_y_axis;
                         break;
+                        
+                    case 3: // FULLSCREEN
+                        // Toggle fullscreen using the same function as F11
+                        game->fullscreen = !game->fullscreen;
+                        game->settings.fullscreen = game->fullscreen;
+                        
+                        if (game->fullscreen) {
+                            // Store the current window size before going fullscreen
+                            SDL_GetWindowSize(game->window, &game->window_width, &game->window_height);
+                            
+                            // For fullscreen, use SDL_WINDOW_FULLSCREEN_DESKTOP for better compatibility
+                            if (SDL_SetWindowFullscreen(game->window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
+                                logError("Error switching to fullscreen: %s", SDL_GetError());
+                            }
+                            
+                            // Get the new resolution after switching to fullscreen
+                            int new_width, new_height;
+                            SDL_GetWindowSize(game->window, &new_width, &new_height);
+                            
+                            // Update UI positions based on new resolution
+                            repositionUI(&game->game_ui, new_width, new_height);
+                            repositionUI(&game->menu_ui, new_width, new_height);
+                            
+                            // Update OpenGL viewport
+                            glViewport(0, 0, new_width, new_height);
+                            
+                            // Update projection matrix for the new aspect ratio
+                            glMatrixMode(GL_PROJECTION);
+                            glLoadIdentity();
+                            float aspect = (float)new_width / (float)new_height;
+                            float fov = CAMERA_FOV;
+                            float near = CAMERA_NEAR;
+                            float far = CAMERA_FAR;
+                            float fH = tan(fov * 3.14159f / 360.0f) * near;
+                            float fW = fH * aspect;
+                            glFrustum(-fW, fW, -fH, fH, near, far);
+                            glMatrixMode(GL_MODELVIEW);
+                            
+                            logInfo("Switched to fullscreen: %dx%d", new_width, new_height);
+                        } else {
+                            // Return to windowed mode with original dimensions
+                            if (SDL_SetWindowFullscreen(game->window, 0) != 0) {
+                                logError("Error switching to windowed mode: %s", SDL_GetError());
+                            }
+                            
+                            // Restore original window size
+                            SDL_SetWindowSize(game->window, WINDOW_WIDTH, WINDOW_HEIGHT);
+                            
+                            // Update UI positions based on original resolution
+                            repositionUI(&game->game_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
+                            repositionUI(&game->menu_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
+                            
+                            // Update OpenGL viewport
+                            glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+                            
+                            // Update projection matrix for the original aspect ratio
+                            glMatrixMode(GL_PROJECTION);
+                            glLoadIdentity();
+                            float aspect = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
+                            float fov = CAMERA_FOV;
+                            float near = CAMERA_NEAR;
+                            float far = CAMERA_FAR;
+                            float fH = tan(fov * 3.14159f / 360.0f) * near;
+                            float fW = fH * aspect;
+                            glFrustum(-fW, fW, -fH, fH, near, far);
+                            glMatrixMode(GL_MODELVIEW);
+                            
+                            logInfo("Switched to windowed mode: %dx%d", WINDOW_WIDTH, WINDOW_HEIGHT);
+                        }
+                        break;
                 }
                 updateMenuUI(game);
                 break;
@@ -1162,6 +1246,76 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         
                     case 2: // INVERT Y AXIS
                         game->settings.invert_y_axis = !game->settings.invert_y_axis;
+                        break;
+                        
+                    case 3: // FULLSCREEN
+                        // Toggle fullscreen using the same function as F11
+                        game->fullscreen = !game->fullscreen;
+                        game->settings.fullscreen = game->fullscreen;
+                        
+                        if (game->fullscreen) {
+                            // Store the current window size before going fullscreen
+                            SDL_GetWindowSize(game->window, &game->window_width, &game->window_height);
+                            
+                            // For fullscreen, use SDL_WINDOW_FULLSCREEN_DESKTOP for better compatibility
+                            if (SDL_SetWindowFullscreen(game->window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
+                                logError("Error switching to fullscreen: %s", SDL_GetError());
+                            }
+                            
+                            // Get the new resolution after switching to fullscreen
+                            int new_width, new_height;
+                            SDL_GetWindowSize(game->window, &new_width, &new_height);
+                            
+                            // Update UI positions based on new resolution
+                            repositionUI(&game->game_ui, new_width, new_height);
+                            repositionUI(&game->menu_ui, new_width, new_height);
+                            
+                            // Update OpenGL viewport
+                            glViewport(0, 0, new_width, new_height);
+                            
+                            // Update projection matrix for the new aspect ratio
+                            glMatrixMode(GL_PROJECTION);
+                            glLoadIdentity();
+                            float aspect = (float)new_width / (float)new_height;
+                            float fov = CAMERA_FOV;
+                            float near = CAMERA_NEAR;
+                            float far = CAMERA_FAR;
+                            float fH = tan(fov * 3.14159f / 360.0f) * near;
+                            float fW = fH * aspect;
+                            glFrustum(-fW, fW, -fH, fH, near, far);
+                            glMatrixMode(GL_MODELVIEW);
+                            
+                            logInfo("Switched to fullscreen: %dx%d", new_width, new_height);
+                        } else {
+                            // Return to windowed mode with original dimensions
+                            if (SDL_SetWindowFullscreen(game->window, 0) != 0) {
+                                logError("Error switching to windowed mode: %s", SDL_GetError());
+                            }
+                            
+                            // Restore original window size
+                            SDL_SetWindowSize(game->window, WINDOW_WIDTH, WINDOW_HEIGHT);
+                            
+                            // Update UI positions based on original resolution
+                            repositionUI(&game->game_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
+                            repositionUI(&game->menu_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
+                            
+                            // Update OpenGL viewport
+                            glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+                            
+                            // Update projection matrix for the original aspect ratio
+                            glMatrixMode(GL_PROJECTION);
+                            glLoadIdentity();
+                            float aspect = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
+                            float fov = CAMERA_FOV;
+                            float near = CAMERA_NEAR;
+                            float far = CAMERA_FAR;
+                            float fH = tan(fov * 3.14159f / 360.0f) * near;
+                            float fW = fH * aspect;
+                            glFrustum(-fW, fW, -fH, fH, near, far);
+                            glMatrixMode(GL_MODELVIEW);
+                            
+                            logInfo("Switched to windowed mode: %dx%d", WINDOW_WIDTH, WINDOW_HEIGHT);
+                        }
                         break;
                 }
                 updateMenuUI(game);
