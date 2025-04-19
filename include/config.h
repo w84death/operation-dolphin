@@ -36,12 +36,12 @@
 #define MOUSE_INVERT_Y_DEFAULT true  // Default setting for Y axis inversion
 
 // Environment settings
-#define TIME_OF_THE_DAY_START 0.3f // 0.0 to 1.0 representing a full day-night cycle
-#define TIME_OF_THE_DAY_DURATION 180.0f  // Length of a full day in seconds
-#define FOG_COLOR_R 0.12f
-#define FOG_COLOR_G 0.25f
-#define FOG_COLOR_B 0.15f
-#define FOG_COLOR_A 1.0f
+#define TIME_OF_THE_DAY_START 0.0f // 0.0 to 1.0 representing a full day-night cycle
+#define TIME_OF_THE_DAY_DURATION 120.0f  // Length of a full day in seconds
+#define FOG_COLOR_R 0.45f
+#define FOG_COLOR_G 0.52f
+#define FOG_COLOR_B 0.47f
+#define FOG_COLOR_A 0.5f
 #define BG_COLOR_R FOG_COLOR_R
 #define BG_COLOR_G FOG_COLOR_G
 #define BG_COLOR_B FOG_COLOR_B

@@ -470,6 +470,9 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     // Calculate the four corners of the billboard
     float half_width = width / 2.0f;
     
+    // Save current lighting state
+    GLboolean lighting_enabled = glIsEnabled(GL_LIGHTING);
+    
     // Enable texturing 
     glEnable(GL_TEXTURE_2D);
     
@@ -479,6 +482,25 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     
     // Bind the texture
     glBindTexture(GL_TEXTURE_2D, texture);
+    
+    // Set material properties for proper lighting interaction
+    if (lighting_enabled) {
+        // Set normal pointing towards the camera (for billboards)
+        float normal[3];
+        normal[0] = -modelview[2];  // Inverse of the camera's forward vector
+        normal[1] = -modelview[6];
+        normal[2] = -modelview[10];
+        
+        // Normalize the vector
+        float length = sqrt(normal[0]*normal[0] + normal[1]*normal[1] + normal[2]*normal[2]);
+        if (length > 0.0001f) {
+            normal[0] /= length;
+            normal[1] /= length;
+            normal[2] /= length;
+        }
+        
+        glNormal3fv(normal);
+    }
     
     // Draw the billboard as a single quad
     glBegin(GL_QUADS);
@@ -525,8 +547,22 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
 
 // Render all vegetation
 void renderVegetation() {
-    // Turn off lighting for billboards
-    glDisable(GL_LIGHTING);
+    // For properly lit vegetation, we need to keep lighting enabled
+    // but disable lighting's influence on color values temporarily 
+    GLfloat ambient[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    GLfloat diffuse[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    
+    // Save current material state
+    GLfloat orig_ambient[4], orig_diffuse[4];
+    glGetMaterialfv(GL_FRONT, GL_AMBIENT, orig_ambient);
+    glGetMaterialfv(GL_FRONT, GL_DIFFUSE, orig_diffuse);
+    
+    // Set material to fully accept light without changing the color
+    glMaterialfv(GL_FRONT, GL_AMBIENT, ambient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuse);
+    
+    // Make sure textures properly interact with lighting
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     
     // Render each piece of vegetation as a billboard
     for (int i = 0; i < vegetation_count; i++) {
@@ -554,8 +590,9 @@ void renderVegetation() {
         }
     }
     
-    // Turn lighting back on
-    glEnable(GL_LIGHTING);
+    // Restore original material state
+    glMaterialfv(GL_FRONT, GL_AMBIENT, orig_ambient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, orig_diffuse);
 }
 
 // Cut medium-sized foliage in front of the player

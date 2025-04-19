@@ -211,20 +211,37 @@ void setupLightingForTimeOfDay(TimeOfDay time_period) {
         .specular = {0.15f, 0.15f, 0.25f, 1.0f}
     };
     
-    // Default material settings (same for all times)
-    MaterialSettings material = {
-        .ambient = {0.5f, 0.5f, 0.5f, 1.0f},
+    // Material settings for different times of day
+    MaterialSettings day_material = {
+        .ambient = {0.6f, 0.6f, 0.6f, 1.0f},
         .diffuse = {1.0f, 1.0f, 1.0f, 1.0f},
         .specular = {0.8f, 0.8f, 0.8f, 1.0f},
-        .shininess = {0.0f},
+        .shininess = {30.0f},
         .emission = {0.0f, 0.0f, 0.0f, 1.0f}
     };
     
+    MaterialSettings evening_material = {
+        .ambient = {0.5f, 0.4f, 0.3f, 1.0f},
+        .diffuse = {0.9f, 0.7f, 0.5f, 1.0f},
+        .specular = {0.7f, 0.5f, 0.3f, 1.0f},
+        .shininess = {20.0f},
+        .emission = {0.1f, 0.05f, 0.0f, 1.0f}
+    };
+    
+    MaterialSettings night_material = {
+        .ambient = {0.2f, 0.2f, 0.3f, 1.0f},
+        .diffuse = {0.4f, 0.4f, 0.6f, 1.0f},
+        .specular = {0.3f, 0.3f, 0.5f, 1.0f},
+        .shininess = {10.0f},
+        .emission = {0.02f, 0.02f, 0.05f, 1.0f}
+    };
+    
+    // Interpolated light and material settings
+    LightSettings light;
+    MaterialSettings material;
+    
     // Get the precise time (0.0 to 1.0)
     float precise_time = getPreciseTimeOfDay();
-    
-    // Interpolated light settings
-    LightSettings light;
     
     // Determine which transition we're in and calculate interpolation factor
     if (precise_time < 0.33f) {
@@ -235,12 +252,26 @@ void setupLightingForTimeOfDay(TimeOfDay time_period) {
             interpolateColor(light.ambient, night_light.ambient, day_light.ambient, t);
             interpolateColor(light.diffuse, night_light.diffuse, day_light.diffuse, t);
             interpolateColor(light.specular, night_light.specular, day_light.specular, t);
+            
+            // Interpolate material properties too
+            interpolateColor(material.ambient, night_material.ambient, day_material.ambient, t);
+            interpolateColor(material.diffuse, night_material.diffuse, day_material.diffuse, t);
+            interpolateColor(material.specular, night_material.specular, day_material.specular, t);
+            material.shininess[0] = lerp(night_material.shininess[0], day_material.shininess[0], t);
+            interpolateColor(material.emission, night_material.emission, day_material.emission, t);
         } else {
             // Regular day lighting
             memcpy(light.position, day_light.position, sizeof(day_light.position));
             memcpy(light.ambient, day_light.ambient, sizeof(day_light.ambient));
             memcpy(light.diffuse, day_light.diffuse, sizeof(day_light.diffuse));
             memcpy(light.specular, day_light.specular, sizeof(day_light.specular));
+            
+            // Use day material settings
+            memcpy(material.ambient, day_material.ambient, sizeof(day_material.ambient));
+            memcpy(material.diffuse, day_material.diffuse, sizeof(day_material.diffuse));
+            memcpy(material.specular, day_material.specular, sizeof(day_material.specular));
+            memcpy(material.shininess, day_material.shininess, sizeof(day_material.shininess));
+            memcpy(material.emission, day_material.emission, sizeof(day_material.emission));
         }
     } 
     else if (precise_time < 0.66f) {
@@ -250,6 +281,13 @@ void setupLightingForTimeOfDay(TimeOfDay time_period) {
         interpolateColor(light.ambient, day_light.ambient, evening_light.ambient, t);
         interpolateColor(light.diffuse, day_light.diffuse, evening_light.diffuse, t);
         interpolateColor(light.specular, day_light.specular, evening_light.specular, t);
+        
+        // Interpolate material properties
+        interpolateColor(material.ambient, day_material.ambient, evening_material.ambient, t);
+        interpolateColor(material.diffuse, day_material.diffuse, evening_material.diffuse, t);
+        interpolateColor(material.specular, day_material.specular, evening_material.specular, t);
+        material.shininess[0] = lerp(day_material.shininess[0], evening_material.shininess[0], t);
+        interpolateColor(material.emission, day_material.emission, evening_material.emission, t);
     } 
     else {
         // Evening to night transition
@@ -258,6 +296,13 @@ void setupLightingForTimeOfDay(TimeOfDay time_period) {
         interpolateColor(light.ambient, evening_light.ambient, night_light.ambient, t);
         interpolateColor(light.diffuse, evening_light.diffuse, night_light.diffuse, t);
         interpolateColor(light.specular, evening_light.specular, night_light.specular, t);
+        
+        // Interpolate material properties
+        interpolateColor(material.ambient, evening_material.ambient, night_material.ambient, t);
+        interpolateColor(material.diffuse, evening_material.diffuse, night_material.diffuse, t);
+        interpolateColor(material.specular, evening_material.specular, night_material.specular, t);
+        material.shininess[0] = lerp(evening_material.shininess[0], night_material.shininess[0], t);
+        interpolateColor(material.emission, evening_material.emission, night_material.emission, t);
     }
     
     // Setup light
