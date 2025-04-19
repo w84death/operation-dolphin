@@ -586,6 +586,13 @@ void cutMediumFoliage(Player* player) {
                 
                 // Vegetation is in front if dot product is positive
                 if (dotProduct > 0) {
+                    // Get the texture ID for this vegetation
+                    GLuint texture = vegetation_textures_medium[vegetation[i].texture_index];
+                    
+                    // Spawn particle effect using the vegetation's texture
+                    spawnFoliageParticles(vegetation[i].x, vegetation[i].y + vegetation[i].height * 0.5f, 
+                                         vegetation[i].z, texture);
+                    
                     // Deactivate the vegetation (cut it)
                     vegetation[i].active = false;
                     printf("Cut medium foliage at position (%f, %f, %f)\n", 
@@ -1210,6 +1217,9 @@ void updateGame(GameState* game, float delta_time) {
             cutMediumFoliage(&game->player);
         }
         
+        // Update particles
+        updateParticles(delta_time);
+        
         // Update day-night cycle
         updateDayNightCycle(delta_time);
     }
@@ -1268,6 +1278,9 @@ void renderGame(GameState* game) {
     
     // Render vegetation
     renderVegetation();
+    
+    // Render particles
+    renderParticles();
     
     // Restore model-view matrix for weapon rendering
     glMatrixMode(GL_MODELVIEW);
