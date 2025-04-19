@@ -8,7 +8,8 @@
 typedef enum {
     TOD_DAY,
     TOD_EVENING,
-    TOD_NIGHT
+    TOD_NIGHT,
+    TOD_MORNING
 } TimeOfDay;
 
 // Function declarations for environment settings
