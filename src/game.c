@@ -22,16 +22,25 @@ static InputState input;
 
 // Type definition for vegetation
 typedef struct {
-    float x, y, z;     // Position
+    float x, y, z;       // Position
     float width, height; // Dimensions
     int texture_index;   // Which texture to use
+    int type;            // 0=small, 1=medium, 2=big
     bool active;         // Whether this vegetation is visible
 } Vegetation;
 
 // Vegetation array
 static Vegetation* vegetation = NULL;
 static int vegetation_count = 0;
-static GLuint vegetation_textures[5]; // For different types of vegetation
+
+// Texture arrays for different vegetation sizes
+#define MAX_TEXTURES_PER_SIZE 12
+static GLuint vegetation_textures_small[MAX_TEXTURES_PER_SIZE];
+static int small_texture_count = 0;
+static GLuint vegetation_textures_medium[MAX_TEXTURES_PER_SIZE];  
+static int medium_texture_count = 0;
+static GLuint vegetation_textures_big[MAX_TEXTURES_PER_SIZE];
+static int big_texture_count = 0;
 
 // Initialize audio system
 bool initAudio(AudioSystem* audio) {
@@ -251,58 +260,170 @@ void cleanupAudio(AudioSystem* audio) {
 
 // Load textures for billboarded vegetation
 bool loadVegetationTextures() {
-    const char* texture_files[] = {
-        VEGETATION_TEXTURE_GRASS,
-        VEGETATION_TEXTURE_GRASS,
-        VEGETATION_TEXTURE_GRASS,
-        VEGETATION_TEXTURE_GRASS,
-        VEGETATION_TEXTURE_TREE1
+    // Small vegetation textures (flowers, grass)
+    const char* small_textures[] = {
+        "textures/foliage/small/flower1.tga",
+        "textures/foliage/small/flower2.tga",
+        "textures/foliage/small/flower3.tga",
+        "textures/foliage/small/flower4.tga",
+        "textures/foliage/small/flowe5.tga",
+        "textures/foliage/small/flower6.tga",
+        "textures/foliage/small/flower7.tga",
+        "textures/foliage/small/flower8.tga",
+        "textures/foliage/small/grass1.tga",
+        "textures/foliage/small/grass2.tga",
+        "textures/foliage/small/grass3.tga",
+        "textures/foliage/small/grass4.tga"
     };
     
-    for (int i = 0; i < 5; i++) {
-        vegetation_textures[i] = loadTexture(texture_files[i]);
-        if (vegetation_textures[i] == 0) {
-            printf("Failed to load vegetation texture: %s\n", texture_files[i]);
-            return false;
+    // Medium vegetation textures (bushes, aloe, small rocks)
+    const char* medium_textures[] = {
+        "textures/foliage/medium/aloes1.tga",
+        "textures/foliage/medium/aloes2.tga",
+        "textures/foliage/medium/aloes3.tga",
+        "textures/foliage/medium/aloes4.tga",
+        "textures/foliage/medium/bush1.tga",
+        "textures/foliage/medium/bush2.tga",
+        "textures/foliage/medium/bush3.tga",
+        "textures/foliage/medium/bush4.tga",
+        "textures/foliage/medium/rock1.tga",
+        "textures/foliage/medium/rock3.tga"
+    };
+    
+    // Big vegetation textures (trees, palms, big rocks)
+    const char* big_textures[] = {
+        "textures/foliage/big/palm1.tga",
+        "textures/foliage/big/palm2.tga",
+        "textures/foliage/big/palm3.tga",
+        "textures/foliage/big/palm4.tga",
+        "textures/foliage/big/tree1.tga",
+        "textures/foliage/big/tree2.tga",
+        "textures/foliage/big/tree3.tga",
+        "textures/foliage/big/tree4.tga",
+        "textures/foliage/big/rock2.tga",
+        "textures/foliage/big/rock4.tga"
+    };
+    
+    // Load small textures
+    small_texture_count = 0;
+    for (int i = 0; i < sizeof(small_textures) / sizeof(small_textures[0]); i++) {
+        if (small_texture_count >= MAX_TEXTURES_PER_SIZE) break;
+        
+        vegetation_textures_small[small_texture_count] = loadTexture(small_textures[i]);
+        if (vegetation_textures_small[small_texture_count] == 0) {
+            printf("Warning: Failed to load small vegetation texture: %s\n", small_textures[i]);
+        } else {
+            printf("Loaded small vegetation texture %d: %s\n", small_texture_count, small_textures[i]);
+            small_texture_count++;
         }
+    }
+    
+    // Load medium textures
+    medium_texture_count = 0;
+    for (int i = 0; i < sizeof(medium_textures) / sizeof(medium_textures[0]); i++) {
+        if (medium_texture_count >= MAX_TEXTURES_PER_SIZE) break;
+        
+        vegetation_textures_medium[medium_texture_count] = loadTexture(medium_textures[i]);
+        if (vegetation_textures_medium[medium_texture_count] == 0) {
+            printf("Warning: Failed to load medium vegetation texture: %s\n", medium_textures[i]);
+        } else {
+            printf("Loaded medium vegetation texture %d: %s\n", medium_texture_count, medium_textures[i]);
+            medium_texture_count++;
+        }
+    }
+    
+    // Load big textures
+    big_texture_count = 0;
+    for (int i = 0; i < sizeof(big_textures) / sizeof(big_textures[0]); i++) {
+        if (big_texture_count >= MAX_TEXTURES_PER_SIZE) break;
+        
+        vegetation_textures_big[big_texture_count] = loadTexture(big_textures[i]);
+        if (vegetation_textures_big[big_texture_count] == 0) {
+            printf("Warning: Failed to load big vegetation texture: %s\n", big_textures[i]);
+        } else {
+            printf("Loaded big vegetation texture %d: %s\n", big_texture_count, big_textures[i]);
+            big_texture_count++;
+        }
+    }
+    
+    if (small_texture_count == 0 || medium_texture_count == 0 || big_texture_count == 0) {
+        printf("Error: Failed to load any vegetation textures in at least one category.\n");
+        return false;
     }
     
     return true;
 }
 
-// Create random vegetation
+// Create random vegetation with three size categories
 void createVegetation(int count, float terrain_size) {
     // Free previous vegetation if any
     if (vegetation != NULL) {
         free(vegetation);
     }
     
+    // Calculate counts for each type based on density settings
+    int count_small = count > TERRAIN_MAX_FEATURES / 2 ? 
+                     TERRAIN_MAX_FEATURES_SMALL : TERRAIN_MAX_FEATURES_SMALL / 2;
+    int count_medium = count > TERRAIN_MAX_FEATURES / 2 ? 
+                      TERRAIN_MAX_FEATURES_MEDIUM : TERRAIN_MAX_FEATURES_MEDIUM / 2;
+    int count_big = count > TERRAIN_MAX_FEATURES / 2 ? 
+                   TERRAIN_MAX_FEATURES_BIG : TERRAIN_MAX_FEATURES_BIG / 2;
+    
+    // Total vegetation count
+    int total_count = count_small + count_medium + count_big;
+    vegetation_count = total_count;
+    
     // Allocate memory for vegetation
-    vegetation_count = count;
     vegetation = (Vegetation*)malloc(sizeof(Vegetation) * vegetation_count);
+    if (vegetation == NULL) {
+        printf("Failed to allocate memory for vegetation\n");
+        return;
+    }
+    
+    printf("Creating %d vegetation objects: %d small, %d medium, %d big\n", 
+           total_count, count_small, count_medium, count_big);
     
     // Create random vegetation
     float half_size = terrain_size / 2.0f;
-    for (int i = 0; i < vegetation_count; i++) {
-        vegetation[i].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
-        vegetation[i].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
-        
-        // Y position will be set based on terrain height
-        vegetation[i].y = -1.5f; // Default ground level
-        
-        // Randomize texture (more trees than grass)
-        int r = rand() % 100;
-        if (r < 30) {
-            vegetation[i].texture_index = 0; // 30% chance for grass
-            vegetation[i].width = 1.0f + ((float)rand() / RAND_MAX) * 0.5f;
-            vegetation[i].height = 0.5f + ((float)rand() / RAND_MAX) * 0.3f;
-        } else {
-            vegetation[i].texture_index = 1 + (rand() % 4); // 70% chance for trees (4 types)
-            vegetation[i].width = 2.0f + ((float)rand() / RAND_MAX) * 1.5f;
-            vegetation[i].height = 3.0f + ((float)rand() / RAND_MAX) * 2.0f;
-        }
-        
-        vegetation[i].active = true;
+    int current_index = 0;
+    
+    // Create small vegetation (flowers, grass)
+    for (int i = 0; i < count_small; i++) {
+        vegetation[current_index].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
+        vegetation[current_index].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
+        vegetation[current_index].y = -1.5f; // Default ground level
+        vegetation[current_index].type = 0;  // Small type
+        vegetation[current_index].texture_index = rand() % small_texture_count;
+        vegetation[current_index].width = 0.5f + ((float)rand() / RAND_MAX) * 0.5f;
+        vegetation[current_index].height = 0.3f + ((float)rand() / RAND_MAX) * 0.3f;
+        vegetation[current_index].active = true;
+        current_index++;
+    }
+    
+    // Create medium vegetation (bushes, aloes)
+    for (int i = 0; i < count_medium; i++) {
+        vegetation[current_index].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
+        vegetation[current_index].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
+        vegetation[current_index].y = -1.5f; // Default ground level
+        vegetation[current_index].type = 1;  // Medium type
+        vegetation[current_index].texture_index = rand() % medium_texture_count;
+        vegetation[current_index].width = 1.5f + ((float)rand() / RAND_MAX) * 1.0f;
+        vegetation[current_index].height = 1.5f + ((float)rand() / RAND_MAX) * 1.5f;
+        vegetation[current_index].active = true;
+        current_index++;
+    }
+    
+    // Create big vegetation (trees, palms)
+    for (int i = 0; i < count_big; i++) {
+        vegetation[current_index].x = ((float)rand() / RAND_MAX) * terrain_size - half_size;
+        vegetation[current_index].z = ((float)rand() / RAND_MAX) * terrain_size - half_size;
+        vegetation[current_index].y = -1.5f; // Default ground level
+        vegetation[current_index].type = 2;  // Big type
+        vegetation[current_index].texture_index = rand() % big_texture_count;
+        vegetation[current_index].width = 3.0f + ((float)rand() / RAND_MAX) * 2.0f;
+        vegetation[current_index].height = 5.0f + ((float)rand() / RAND_MAX) * 3.0f;
+        vegetation[current_index].active = true;
+        current_index++;
     }
 }
 
@@ -324,6 +445,9 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     // Calculate the four corners of the billboard
     float half_width = width / 2.0f;
     
+    // Fix pivot point to be 10% from the bottom for better ground blending
+    float pivot_height = height * 0.1f;
+    
     // Enable texturing and blending for transparent billboards
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
@@ -339,7 +463,7 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glTexCoord2f(0.0f, 1.0f);
     glVertex3f(
         x - right_x * half_width,
-        y,
+        y - pivot_height, // Offset by pivot height
         z - right_z * half_width
     );
     
@@ -347,7 +471,7 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glTexCoord2f(1.0f, 1.0f);
     glVertex3f(
         x + right_x * half_width,
-        y,
+        y - pivot_height, // Offset by pivot height
         z + right_z * half_width
     );
     
@@ -355,7 +479,7 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glTexCoord2f(1.0f, 0.0f);
     glVertex3f(
         x + right_x * half_width,
-        y + height,
+        y - pivot_height + height, // Offset by pivot height
         z + right_z * half_width
     );
     
@@ -363,7 +487,7 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glTexCoord2f(0.0f, 0.0f);
     glVertex3f(
         x - right_x * half_width,
-        y + height,
+        y - pivot_height + height, // Offset by pivot height
         z - right_z * half_width
     );
     
@@ -382,13 +506,25 @@ void renderVegetation() {
     // Render each piece of vegetation as a billboard
     for (int i = 0; i < vegetation_count; i++) {
         if (vegetation[i].active) {
+            GLuint texture;
+            switch (vegetation[i].type) {
+                case 0:
+                    texture = vegetation_textures_small[vegetation[i].texture_index];
+                    break;
+                case 1:
+                    texture = vegetation_textures_medium[vegetation[i].texture_index];
+                    break;
+                case 2:
+                    texture = vegetation_textures_big[vegetation[i].texture_index];
+                    break;
+            }
             drawBillboard(
                 vegetation[i].x, 
                 vegetation[i].y, 
                 vegetation[i].z, 
                 vegetation[i].width, 
                 vegetation[i].height, 
-                vegetation_textures[vegetation[i].texture_index]
+                texture
             );
         }
     }

@@ -76,7 +76,17 @@
 // Billboard vegetation settings
 #define VEGETATION_TEXTURE_GRASS "textures/foliage/small/grass1.tga"
 #define VEGETATION_TEXTURE_TREE1 "textures/foliage/big/tree1.tga"
+#define VEGETATION_TEXTURE_TREE2 "textures/foliage/medium/bush1.tga"
+#define VEGETATION_TEXTURE_TREE3 "textures/foliage/medium/aloes1.tga"
+#define VEGETATION_TEXTURE_TREE4 "textures/foliage/big/palm1.tga"
+#define VEGETATION_TEXTURE_TREE5 "textures/foliage/big/tree2.tga"
 #define VEGETATION_DENSITY 0.8f  // Higher values = more vegetation
+#define VEGETATION_DENSITY_SMALL 3.0f  // Multiplier for small vegetation
+#define VEGETATION_DENSITY_MEDIUM 1.5f  // Multiplier for medium vegetation
+#define VEGETATION_DENSITY_BIG 1.0f  // Multiplier for big vegetation
+#define TERRAIN_MAX_FEATURES_SMALL 800  // Small vegetation count
+#define TERRAIN_MAX_FEATURES_MEDIUM 400  // Medium vegetation count
+#define TERRAIN_MAX_FEATURES_BIG 200  // Big vegetation count
 
 // Font settings
 #define GAME_FONT_FILE "fonts/NovaSquare-Regular.ttf"
