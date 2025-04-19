@@ -1,9 +1,16 @@
-alpha:
-    - [todo] day/night cycle
-    - [todo] nightvision google
-    - [todo] enemies
+alpha2:
+    - proper day/night cycle (40% day,10% evening, 40% night, 10% morning)
+    - [todo] night-vision google
+    - [todo] enemies engine
+    - [todo] actual enemies with some hunting logic
     - [todo] stealth movement
+    
     - [todo] end game
+
+alpha:
+    - settings
+    - updated console logs
+    - release builds
 
 pre-alpha:
     - engine ported to FPS

@@ -143,11 +143,11 @@ float getPreciseTimeOfDay(void) {
 void setupFogForTimeOfDay(TimeOfDay time_period, float fog_start, float fog_end) {
     GLfloat fog_color[4];
     
-    // Define the base colors for each time period
-    GLfloat day_color[4] = {FOG_COLOR_R, FOG_COLOR_G, FOG_COLOR_B, FOG_COLOR_A};
-    GLfloat evening_color[4] = {0.7f, 0.5f, 0.3f, FOG_COLOR_A};
-    GLfloat night_color[4] = {0.05f, 0.05f, 0.15f, FOG_COLOR_A};
-    GLfloat morning_color[4] = {0.6f, 0.6f, 0.8f, FOG_COLOR_A}; // Blueish dawn color
+    // Define the base colors for each time period using config values
+    GLfloat day_color[4] = {DAY_FOG_COLOR_R, DAY_FOG_COLOR_G, DAY_FOG_COLOR_B, DAY_FOG_COLOR_A};
+    GLfloat evening_color[4] = {EVENING_FOG_COLOR_R, EVENING_FOG_COLOR_G, EVENING_FOG_COLOR_B, EVENING_FOG_COLOR_A};
+    GLfloat night_color[4] = {NIGHT_FOG_COLOR_R, NIGHT_FOG_COLOR_G, NIGHT_FOG_COLOR_B, NIGHT_FOG_COLOR_A};
+    GLfloat morning_color[4] = {MORNING_FOG_COLOR_R, MORNING_FOG_COLOR_G, MORNING_FOG_COLOR_B, MORNING_FOG_COLOR_A};
     
     // Get the precise time (0.0 to 1.0)
     float precise_time = getPreciseTimeOfDay();
@@ -195,33 +195,33 @@ void setupFogForTimeOfDay(TimeOfDay time_period, float fog_start, float fog_end)
 
 // Setup lighting based on precise time of day
 void setupLightingForTimeOfDay(TimeOfDay time_period) {
-    // Define lighting settings for each time period
+    // Define lighting settings for each time period using config values
     LightSettings day_light = {
         .position = {4.0f, 6.0f, 12.0f, 0.0f},
-        .ambient = {0.6f, 0.5f, 0.3f, 1.0f},
-        .diffuse = {1.0f, 1.0f, 1.0f, 1.0f},
-        .specular = {1.0f, 1.0f, 1.0f, 1.0f}
+        .ambient = {DAY_AMBIENT_R, DAY_AMBIENT_G, DAY_AMBIENT_B, 1.0f},
+        .diffuse = {DAY_DIFFUSE_R, DAY_DIFFUSE_G, DAY_DIFFUSE_B, 1.0f},
+        .specular = {DAY_SPECULAR_R, DAY_SPECULAR_G, DAY_SPECULAR_B, 1.0f}
     };
     
     LightSettings evening_light = {
         .position = {12.0f, 0.0f, 2.0f, 0.0f},
-        .ambient = {0.5f, 0.3f, 0.2f, 1.0f},
-        .diffuse = {0.9f, 0.6f, 0.4f, 1.0f},
-        .specular = {0.8f, 0.6f, 0.4f, 1.0f}
+        .ambient = {EVENING_AMBIENT_R, EVENING_AMBIENT_G, EVENING_AMBIENT_B, 1.0f},
+        .diffuse = {EVENING_DIFFUSE_R, EVENING_DIFFUSE_G, EVENING_DIFFUSE_B, 1.0f},
+        .specular = {EVENING_SPECULAR_R, EVENING_SPECULAR_G, EVENING_SPECULAR_B, 1.0f}
     };
     
     LightSettings night_light = {
         .position = {-2.0f, 4.0f, -6.0f, 0.0f},
-        .ambient = {0.05f, 0.05f, 0.1f, 1.0f},
-        .diffuse = {0.1f, 0.1f, 0.2f, 1.0f},
-        .specular = {0.15f, 0.15f, 0.25f, 1.0f}
+        .ambient = {NIGHT_AMBIENT_R, NIGHT_AMBIENT_G, NIGHT_AMBIENT_B, 1.0f},
+        .diffuse = {NIGHT_DIFFUSE_R, NIGHT_DIFFUSE_G, NIGHT_DIFFUSE_B, 1.0f},
+        .specular = {NIGHT_SPECULAR_R, NIGHT_SPECULAR_G, NIGHT_SPECULAR_B, 1.0f}
     };
     
     LightSettings morning_light = {
         .position = {-4.0f, 1.0f, 10.0f, 0.0f},
-        .ambient = {0.4f, 0.4f, 0.6f, 1.0f},
-        .diffuse = {0.8f, 0.8f, 1.0f, 1.0f},
-        .specular = {0.6f, 0.6f, 0.8f, 1.0f}
+        .ambient = {MORNING_AMBIENT_R, MORNING_AMBIENT_G, MORNING_AMBIENT_B, 1.0f},
+        .diffuse = {MORNING_DIFFUSE_R, MORNING_DIFFUSE_G, MORNING_DIFFUSE_B, 1.0f},
+        .specular = {MORNING_SPECULAR_R, MORNING_SPECULAR_G, MORNING_SPECULAR_B, 1.0f}
     };
     
     // Material settings for different times of day

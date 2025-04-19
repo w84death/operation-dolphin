@@ -38,10 +38,73 @@
 // Environment settings
 #define TIME_OF_THE_DAY_START 0.3f // 0.0 to 1.0 representing a full day-night cycle
 #define TIME_OF_THE_DAY_DURATION 120.0f  // Length of a full day in seconds
-#define FOG_COLOR_R 0.45f
-#define FOG_COLOR_G 0.52f
-#define FOG_COLOR_B 0.47f
-#define FOG_COLOR_A 0.5f
+
+// Day/night cycle colors
+// DAY colors (40% of cycle: 0.0-0.4)
+#define DAY_FOG_COLOR_R 0.45f
+#define DAY_FOG_COLOR_G 0.52f
+#define DAY_FOG_COLOR_B 0.47f
+#define DAY_FOG_COLOR_A 0.5f
+#define DAY_AMBIENT_R 0.6f
+#define DAY_AMBIENT_G 0.5f
+#define DAY_AMBIENT_B 0.3f
+#define DAY_DIFFUSE_R 1.0f
+#define DAY_DIFFUSE_G 1.0f
+#define DAY_DIFFUSE_B 1.0f
+#define DAY_SPECULAR_R 1.0f
+#define DAY_SPECULAR_G 1.0f
+#define DAY_SPECULAR_B 1.0f
+
+// EVENING colors (10% of cycle: 0.4-0.5)
+#define EVENING_FOG_COLOR_R 0.7f
+#define EVENING_FOG_COLOR_G 0.5f
+#define EVENING_FOG_COLOR_B 0.3f
+#define EVENING_FOG_COLOR_A 0.5f
+#define EVENING_AMBIENT_R 0.5f
+#define EVENING_AMBIENT_G 0.3f
+#define EVENING_AMBIENT_B 0.2f
+#define EVENING_DIFFUSE_R 0.9f
+#define EVENING_DIFFUSE_G 0.6f
+#define EVENING_DIFFUSE_B 0.4f
+#define EVENING_SPECULAR_R 0.8f
+#define EVENING_SPECULAR_G 0.6f
+#define EVENING_SPECULAR_B 0.4f
+
+// NIGHT colors (40% of cycle: 0.5-0.9)
+#define NIGHT_FOG_COLOR_R 0.05f
+#define NIGHT_FOG_COLOR_G 0.05f
+#define NIGHT_FOG_COLOR_B 0.15f
+#define NIGHT_FOG_COLOR_A 0.5f
+#define NIGHT_AMBIENT_R 0.05f
+#define NIGHT_AMBIENT_G 0.05f
+#define NIGHT_AMBIENT_B 0.1f
+#define NIGHT_DIFFUSE_R 0.1f
+#define NIGHT_DIFFUSE_G 0.1f
+#define NIGHT_DIFFUSE_B 0.2f
+#define NIGHT_SPECULAR_R 0.15f
+#define NIGHT_SPECULAR_G 0.15f
+#define NIGHT_SPECULAR_B 0.25f
+
+// MORNING colors (10% of cycle: 0.9-1.0)
+#define MORNING_FOG_COLOR_R 0.6f
+#define MORNING_FOG_COLOR_G 0.6f
+#define MORNING_FOG_COLOR_B 0.8f
+#define MORNING_FOG_COLOR_A 0.5f
+#define MORNING_AMBIENT_R 0.4f
+#define MORNING_AMBIENT_G 0.4f
+#define MORNING_AMBIENT_B 0.6f
+#define MORNING_DIFFUSE_R 0.8f
+#define MORNING_DIFFUSE_G 0.8f
+#define MORNING_DIFFUSE_B 1.0f
+#define MORNING_SPECULAR_R 0.6f
+#define MORNING_SPECULAR_G 0.6f
+#define MORNING_SPECULAR_B 0.8f
+
+// Legacy fog color definitions (keeping for compatibility)
+#define FOG_COLOR_R DAY_FOG_COLOR_R
+#define FOG_COLOR_G DAY_FOG_COLOR_G
+#define FOG_COLOR_B DAY_FOG_COLOR_B
+#define FOG_COLOR_A DAY_FOG_COLOR_A
 #define BG_COLOR_R FOG_COLOR_R
 #define BG_COLOR_G FOG_COLOR_G
 #define BG_COLOR_B FOG_COLOR_B
