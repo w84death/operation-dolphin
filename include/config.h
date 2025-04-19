@@ -152,8 +152,8 @@
 // Billboard vegetation settings
 #define TERRAIN_MAX_FEATURES 5000
 #define VEGETATION_DENSITY_SMALL 0.8f  // Multiplier for small vegetation
-#define VEGETATION_DENSITY_MEDIUM 0.2f  // Multiplier for medium vegetation
-#define VEGETATION_DENSITY_BIG 0.05f  // Multiplier for big vegetation
+#define VEGETATION_DENSITY_MEDIUM 0.25f  // Multiplier for medium vegetation
+#define VEGETATION_DENSITY_BIG 0.1f  // Multiplier for big vegetation
 
 // Font settings
 #define GAME_FONT_FILE "fonts/NovaSquare-Regular.ttf"

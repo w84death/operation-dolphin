@@ -445,12 +445,19 @@ void createVegetationForChunk(int chunk_x, int chunk_z, float chunk_size, unsign
     for (int i = 0; i < count_small; i++) {
         if (current_index >= vegetation_capacity) break;
         
+        // Get a scale factor for this vegetation instance (0.8-1.2 range)
+        float scale_factor = 0.8f + ((float)rand() / RAND_MAX) * 0.4f;
+        
         vegetation[current_index].x = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_x;
         vegetation[current_index].z = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_z;
         vegetation[current_index].type = 0;  // Small type
         vegetation[current_index].texture_index = rand() % small_texture_count;
-        vegetation[current_index].width = 0.5f + ((float)rand() / RAND_MAX) * 0.5f;
-        vegetation[current_index].height = 0.3f + ((float)rand() / RAND_MAX) * 0.3f;
+        
+        // Apply random scaling to base dimensions
+        float base_width = 0.5f + ((float)rand() / RAND_MAX) * 0.5f;
+        float base_height = 0.3f + ((float)rand() / RAND_MAX) * 0.3f;
+        vegetation[current_index].width = base_width * scale_factor;
+        vegetation[current_index].height = base_height * scale_factor;
         
         // Place vegetation ON the ground surface (not buried)
         vegetation[current_index].y = ground_level + 0.01f; // Slightly above ground level to prevent z-fighting
@@ -466,12 +473,19 @@ void createVegetationForChunk(int chunk_x, int chunk_z, float chunk_size, unsign
     for (int i = 0; i < count_medium; i++) {
         if (current_index >= vegetation_capacity) break;
         
+        // Get a scale factor for this vegetation instance (0.7-1.3 range for medium vegetation)
+        float scale_factor = 0.7f + ((float)rand() / RAND_MAX) * 0.6f;
+        
         vegetation[current_index].x = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_x;
         vegetation[current_index].z = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_z;
         vegetation[current_index].type = 1;  // Medium type
         vegetation[current_index].texture_index = rand() % medium_texture_count;
-        vegetation[current_index].width = 1.5f + ((float)rand() / RAND_MAX) * 1.0f;
-        vegetation[current_index].height = 1.5f + ((float)rand() / RAND_MAX) * 1.5f;
+        
+        // Apply random scaling to base dimensions
+        float base_width = 1.5f + ((float)rand() / RAND_MAX) * 1.0f;
+        float base_height = 1.5f + ((float)rand() / RAND_MAX) * 1.5f;
+        vegetation[current_index].width = base_width * scale_factor;
+        vegetation[current_index].height = base_height * scale_factor;
         
         // Place medium vegetation ON the ground surface (not buried)
         vegetation[current_index].y = ground_level + 0.01f; // Slightly above ground level
@@ -487,12 +501,19 @@ void createVegetationForChunk(int chunk_x, int chunk_z, float chunk_size, unsign
     for (int i = 0; i < count_big; i++) {
         if (current_index >= vegetation_capacity) break;
         
+        // Get a scale factor for this vegetation instance (0.6-1.4 range for big vegetation)
+        float scale_factor = 0.6f + ((float)rand() / RAND_MAX) * 0.8f;
+        
         vegetation[current_index].x = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_x;
         vegetation[current_index].z = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_z;
         vegetation[current_index].type = 2;  // Big type
         vegetation[current_index].texture_index = rand() % big_texture_count;
-        vegetation[current_index].width = 3.0f + ((float)rand() / RAND_MAX) * 2.0f;
-        vegetation[current_index].height = 5.0f + ((float)rand() / RAND_MAX) * 3.0f;
+        
+        // Apply random scaling to base dimensions
+        float base_width = 3.0f + ((float)rand() / RAND_MAX) * 2.0f;
+        float base_height = 5.0f + ((float)rand() / RAND_MAX) * 3.0f;
+        vegetation[current_index].width = base_width * scale_factor;
+        vegetation[current_index].height = base_height * scale_factor;
         
         // Place vegetation properly on the ground (y position)
         vegetation[current_index].y = ground_level + 0.01f; // Slightly above ground level
@@ -804,8 +825,16 @@ bool initGame(GameState* game) {
         return false;
     }
     
-    // Create vegetation
-    createVegetation(TERRAIN_MAX_FEATURES, TERRAIN_TILE_SIZE);
+    // Initialize settings before creating vegetation (to ensure settings are applied)
+    game->settings.sound_enabled = true;
+    game->settings.high_terrain_features = true;
+    game->settings.invert_y_axis = MOUSE_INVERT_Y_DEFAULT;
+    game->settings.fullscreen = game->fullscreen;
+    
+    // Create vegetation with the appropriate density based on quality setting
+    int vegetation_count = game->settings.high_terrain_features ? 
+                          TERRAIN_MAX_FEATURES : TERRAIN_MAX_FEATURES / 2;
+    createVegetation(vegetation_count, TERRAIN_TILE_SIZE);
     
     // Initialize day-night cycle
     initEnvironment();
