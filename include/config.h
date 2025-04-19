@@ -2,8 +2,8 @@
 #define CONFIG_H
 
 // Window settings
-#define WINDOW_WIDTH 800
-#define WINDOW_HEIGHT 600
+#define WINDOW_WIDTH 640
+#define WINDOW_HEIGHT 480
 #define WINDOW_TITLE "OPERATION DOLPHIN"
 #define GAME_MENU_TITLE "- O P E R A T I O N - D O L P H I N -"
 #define GAME_MENU_RESUME "RESUME GAME"
@@ -46,8 +46,8 @@
 #define BG_COLOR_G FOG_COLOR_G
 #define BG_COLOR_B FOG_COLOR_B
 #define BG_COLOR_A 1.0f
-#define FOG_START 15.0f
-#define FOG_END 50.0f
+#define FOG_START 2.0f
+#define FOG_END 15.0f
 
 // Camera settings
 #define CAMERA_FOV 75.0f
@@ -64,29 +64,23 @@
 #define PLAYER_JUMP_VELOCITY 5.0f
 #define PLAYER_GRAVITY 9.8f
 #define PLAYER_WEAPON_MODEL "models/weapon.glb"
+#define PLAYER_WEAPON_TEXTURE "textures/weapons/weapon0.tga"
 
 // Terrain settings
 #define TERRAIN_POSITION_X 0.0f
-#define TERRAIN_POSITION_Y -1.5f
+#define TERRAIN_POSITION_Y 0.0f
 #define TERRAIN_POSITION_Z 0.0f
 #define TERRAIN_TILE_SIZE 50.0f
 #define TERRAIN_HEIGHT_SCALE 5.0f
 #define TERRAIN_MAX_FEATURES 200
 
 // Billboard vegetation settings
-#define VEGETATION_TEXTURE_GRASS "textures/foliage/small/grass1.tga"
-#define VEGETATION_TEXTURE_TREE1 "textures/foliage/big/tree1.tga"
-#define VEGETATION_TEXTURE_TREE2 "textures/foliage/medium/bush1.tga"
-#define VEGETATION_TEXTURE_TREE3 "textures/foliage/medium/aloes1.tga"
-#define VEGETATION_TEXTURE_TREE4 "textures/foliage/big/palm1.tga"
-#define VEGETATION_TEXTURE_TREE5 "textures/foliage/big/tree2.tga"
-#define VEGETATION_DENSITY 0.8f  // Higher values = more vegetation
-#define VEGETATION_DENSITY_SMALL 3.0f  // Multiplier for small vegetation
-#define VEGETATION_DENSITY_MEDIUM 1.5f  // Multiplier for medium vegetation
-#define VEGETATION_DENSITY_BIG 1.0f  // Multiplier for big vegetation
-#define TERRAIN_MAX_FEATURES_SMALL 800  // Small vegetation count
-#define TERRAIN_MAX_FEATURES_MEDIUM 400  // Medium vegetation count
-#define TERRAIN_MAX_FEATURES_BIG 200  // Big vegetation count
+#define VEGETATION_DENSITY_SMALL 500.0f  // Multiplier for small vegetation
+#define VEGETATION_DENSITY_MEDIUM 50.0f  // Multiplier for medium vegetation
+#define VEGETATION_DENSITY_BIG 5.0f  // Multiplier for big vegetation
+#define TERRAIN_MAX_FEATURES_SMALL 5000  // Small vegetation count
+#define TERRAIN_MAX_FEATURES_MEDIUM 500  // Medium vegetation count
+#define TERRAIN_MAX_FEATURES_BIG 250  // Big vegetation count
 
 // Font settings
 #define GAME_FONT_FILE "fonts/NovaSquare-Regular.ttf"

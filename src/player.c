@@ -5,8 +5,9 @@
 #include <GL/glu.h>
 #include "../include/player.h"
 #include "../include/config.h"
+#include "../stb_image.h" // Include stb_image for texture loading
 
-// Initialize the player with default values and load weapon model
+// Initialize the player with default values and load weapon texture
 void initPlayer(Player *player) {
     // Initialize position and orientation
     player->position_x = 0.0f;
@@ -30,31 +31,34 @@ void initPlayer(Player *player) {
     player->is_moving = false;
     player->is_jumping = false;
     
-    // Load weapon model (if available)
-    player->weapon_model = loadModel(PLAYER_WEAPON_MODEL);
-    if (player->weapon_model.num_meshes == 0) {
-        printf("Warning: Failed to load weapon model!\n");
+    // Load weapon texture
+    printf("Loading weapon texture from: %s\n", PLAYER_WEAPON_TEXTURE);
+    
+    int width, height, channels;
+    unsigned char *image = stbi_load(PLAYER_WEAPON_TEXTURE, &width, &height, &channels, STBI_rgb_alpha);
+    
+    if (!image) {
+        printf("Error loading weapon texture: %s\n", stbi_failure_reason());
         return;
     }
     
-    // Allocate and generate buffers for the weapon model
-    player->weapon_vbos = (GLuint*)malloc(player->weapon_model.num_meshes * sizeof(GLuint));
-    player->weapon_ibos = (GLuint*)malloc(player->weapon_model.num_meshes * sizeof(GLuint));
+    // Generate texture
+    glGenTextures(1, &player->weapon_texture_id);
+    glBindTexture(GL_TEXTURE_2D, player->weapon_texture_id);
     
-    glGenBuffers(player->weapon_model.num_meshes, player->weapon_vbos);
-    glGenBuffers(player->weapon_model.num_meshes, player->weapon_ibos);
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     
-    for (unsigned int i = 0; i < player->weapon_model.num_meshes; i++) {
-        // Vertex buffer
-        glBindBuffer(GL_ARRAY_BUFFER, player->weapon_vbos[i]);
-        glBufferData(GL_ARRAY_BUFFER, player->weapon_model.num_vertices[i] * 12 * sizeof(float),
-                    player->weapon_model.vertices[i], GL_STATIC_DRAW);
-                    
-        // Index buffer
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, player->weapon_ibos[i]);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, player->weapon_model.num_indices[i] * sizeof(unsigned int),
-                    player->weapon_model.indices[i], GL_STATIC_DRAW);
-    }
+    // Upload texture data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+    
+    // Free the image data as it's now in GPU memory
+    stbi_image_free(image);
+    
+    printf("Weapon texture loaded successfully, ID: %u\n", player->weapon_texture_id);
 }
 
 // Update player state based on time
@@ -85,63 +89,49 @@ void updatePlayer(Player *player, float delta_time) {
 
 // Render the player's weapon
 void renderWeapon(Player *player) {
-    if (player->weapon_model.num_meshes == 0) return;
+    // Check if we have a valid texture
+    if (player->weapon_texture_id == 0) return;
     
+    // Save current matrix and attributes
     glPushMatrix();
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
     
-    // Position weapon in front of camera
-    glTranslatef(0.3f, -0.3f, -0.7f);
-    glRotatef(10.0f, 0.0f, 1.0f, 0.0f); // Slight angle adjustment
-    glScalef(0.2f, 0.2f, 0.2f); // Scale down the weapon
+    // Set up proper blending for the texture
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_NORMAL_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
+    // Make sure we're in texture 2D mode
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, player->weapon_texture_id);
     
-    // Render each mesh of the weapon
-    for (unsigned int i = 0; i < player->weapon_model.num_meshes; i++) {
-        glBindBuffer(GL_ARRAY_BUFFER, player->weapon_vbos[i]);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, player->weapon_ibos[i]);
-        
-        // Set up vertex pointers
-        glVertexPointer(3, GL_FLOAT, 12 * sizeof(float), (void*)0);
-        glNormalPointer(GL_FLOAT, 12 * sizeof(float), (void*)(3 * sizeof(float)));
-        glTexCoordPointer(2, GL_FLOAT, 12 * sizeof(float), (void*)(6 * sizeof(float)));
-        glColorPointer(4, GL_FLOAT, 12 * sizeof(float), (void*)(8 * sizeof(float)));
-        
-        // Bind texture
-        glBindTexture(GL_TEXTURE_2D, player->weapon_model.texture_ids[i]);
-        
-        // Draw mesh
-        glDrawElements(GL_TRIANGLES, player->weapon_model.num_indices[i], GL_UNSIGNED_INT, 0);
-    }
+    // Position the weapon texture in view
+    glTranslatef(0.5f, -0.4f, -1.0f);
     
-    // Disable vertex attributes
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_NORMAL_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+    // Apply a slight rotation to match the player's view
+    glRotatef(-5.0f, 0.0f, 0.0f, 1.0f);
+    glRotatef(5.0f, 0.0f, 1.0f, 0.0f);
     
+    // Draw a textured quad for the weapon
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(-0.5f, -0.5f, 0.0f);  // Bottom left
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.5f, -0.5f, 0.0f);   // Bottom right
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.5f, 0.5f, 0.0f);    // Top right
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(-0.5f, 0.5f, 0.0f);   // Top left
+    glEnd();
+    
+    // Restore previous state
+    glPopAttrib();
     glPopMatrix();
 }
 
 // Clean up player resources
 void cleanupPlayer(Player *player) {
-    // Cleanup weapon model
-    if (player->weapon_vbos) {
-        glDeleteBuffers(player->weapon_model.num_meshes, player->weapon_vbos);
-        free(player->weapon_vbos);
-        player->weapon_vbos = NULL;
+    // Delete the weapon texture if it exists
+    if (player->weapon_texture_id != 0) {
+        glDeleteTextures(1, &player->weapon_texture_id);
+        player->weapon_texture_id = 0;
+        printf("Weapon texture released\n");
     }
-    
-    if (player->weapon_ibos) {
-        glDeleteBuffers(player->weapon_model.num_meshes, player->weapon_ibos);
-        free(player->weapon_ibos);
-        player->weapon_ibos = NULL;
-    }
-    
-    freeModel(player->weapon_model);
 }
 
 // Movement functions

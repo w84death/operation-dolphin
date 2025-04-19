@@ -29,9 +29,7 @@ typedef struct {
     float gravity;
     
     // Weapon/interaction
-    Model weapon_model;
-    GLuint *weapon_vbos;
-    GLuint *weapon_ibos;
+    GLuint weapon_texture_id;  // Texture ID for 2D weapon instead of 3D model
 } Player;
 
 // Function declarations

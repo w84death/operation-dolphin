@@ -262,14 +262,6 @@ void cleanupAudio(AudioSystem* audio) {
 bool loadVegetationTextures() {
     // Small vegetation textures (flowers, grass)
     const char* small_textures[] = {
-        "textures/foliage/small/flower1.tga",
-        "textures/foliage/small/flower2.tga",
-        "textures/foliage/small/flower3.tga",
-        "textures/foliage/small/flower4.tga",
-        "textures/foliage/small/flowe5.tga",
-        "textures/foliage/small/flower6.tga",
-        "textures/foliage/small/flower7.tga",
-        "textures/foliage/small/flower8.tga",
         "textures/foliage/small/grass1.tga",
         "textures/foliage/small/grass2.tga",
         "textures/foliage/small/grass3.tga",
@@ -282,6 +274,14 @@ bool loadVegetationTextures() {
         "textures/foliage/medium/aloes2.tga",
         "textures/foliage/medium/aloes3.tga",
         "textures/foliage/medium/aloes4.tga",
+        "textures/foliage/medium/flower1.tga",
+        "textures/foliage/medium/flower2.tga",
+        "textures/foliage/medium/flower3.tga",
+        "textures/foliage/medium/flower4.tga",
+        "textures/foliage/medium/flowe5.tga",
+        "textures/foliage/medium/flower6.tga",
+        "textures/foliage/medium/flower7.tga",
+        "textures/foliage/medium/flower8.tga",
         "textures/foliage/medium/bush1.tga",
         "textures/foliage/medium/bush2.tga",
         "textures/foliage/medium/bush3.tga",
@@ -362,12 +362,27 @@ void createVegetation(int count, float terrain_size) {
     }
     
     // Calculate counts for each type based on density settings
-    int count_small = count > TERRAIN_MAX_FEATURES / 2 ? 
-                     TERRAIN_MAX_FEATURES_SMALL : TERRAIN_MAX_FEATURES_SMALL / 2;
-    int count_medium = count > TERRAIN_MAX_FEATURES / 2 ? 
-                      TERRAIN_MAX_FEATURES_MEDIUM : TERRAIN_MAX_FEATURES_MEDIUM / 2;
-    int count_big = count > TERRAIN_MAX_FEATURES / 2 ? 
-                   TERRAIN_MAX_FEATURES_BIG : TERRAIN_MAX_FEATURES_BIG / 2;
+    int base_count = count > TERRAIN_MAX_FEATURES / 2 ? count : count / 2;
+    
+    // Apply density multipliers to calculate actual counts for each category
+    int count_small = (int)(base_count * VEGETATION_DENSITY_SMALL);
+    if (count_small > TERRAIN_MAX_FEATURES_SMALL) count_small = TERRAIN_MAX_FEATURES_SMALL;
+    
+    int count_medium = (int)(base_count * VEGETATION_DENSITY_MEDIUM);
+    if (count_medium > TERRAIN_MAX_FEATURES_MEDIUM) count_medium = TERRAIN_MAX_FEATURES_MEDIUM;
+    
+    int count_big = (int)(base_count * VEGETATION_DENSITY_BIG);
+    if (count_big > TERRAIN_MAX_FEATURES_BIG) count_big = TERRAIN_MAX_FEATURES_BIG;
+    
+    // Print debug information about density calculations
+    printf("Vegetation density calculations:\n");
+    printf("  Base count: %d\n", base_count);
+    printf("  Small vegetation: %d × %.1f = %d (max: %d)\n", 
+           base_count, VEGETATION_DENSITY_SMALL, count_small, TERRAIN_MAX_FEATURES_SMALL);
+    printf("  Medium vegetation: %d × %.1f = %d (max: %d)\n", 
+           base_count, VEGETATION_DENSITY_MEDIUM, count_medium, TERRAIN_MAX_FEATURES_MEDIUM);
+    printf("  Big vegetation: %d × %.1f = %d (max: %d)\n", 
+           base_count, VEGETATION_DENSITY_BIG, count_big, TERRAIN_MAX_FEATURES_BIG);
     
     // Total vegetation count
     int total_count = count_small + count_medium + count_big;
@@ -399,9 +414,8 @@ void createVegetation(int count, float terrain_size) {
         vegetation[current_index].width = 0.5f + ((float)rand() / RAND_MAX) * 0.5f;
         vegetation[current_index].height = 0.3f + ((float)rand() / RAND_MAX) * 0.3f;
         
-        // Place vegetation properly on the ground (y position)
-        // We want the bottom of the visible part to be at ground level
-        vegetation[current_index].y = ground_level;
+        // Place vegetation ON the ground surface (not buried)
+        vegetation[current_index].y = ground_level + 0.01f; // Slightly above ground level to prevent z-fighting
         
         vegetation[current_index].active = true;
         current_index++;
@@ -416,8 +430,8 @@ void createVegetation(int count, float terrain_size) {
         vegetation[current_index].width = 1.5f + ((float)rand() / RAND_MAX) * 1.0f;
         vegetation[current_index].height = 1.5f + ((float)rand() / RAND_MAX) * 1.5f;
         
-        // Place vegetation properly on the ground (y position)
-        vegetation[current_index].y = ground_level;
+        // Place medium vegetation ON the ground surface (not buried)
+        vegetation[current_index].y = ground_level + 0.01f; // Slightly above ground level
         
         vegetation[current_index].active = true;
         current_index++;
@@ -433,7 +447,7 @@ void createVegetation(int count, float terrain_size) {
         vegetation[current_index].height = 5.0f + ((float)rand() / RAND_MAX) * 3.0f;
         
         // Place vegetation properly on the ground (y position)
-        vegetation[current_index].y = ground_level;
+        vegetation[current_index].y = ground_level + 0.01f; // Slightly above ground level
         
         vegetation[current_index].active = true;
         current_index++;
@@ -453,13 +467,12 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     // Calculate the four corners of the billboard
     float half_width = width / 2.0f;
     
-    // Calculate pivot point (10% from the bottom for better ground blending)
-    float pivot_height = height * 0.1f;
-    
-    // Enable texturing and blending for transparent billboards
+    // Enable texturing 
     glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    // Use alpha testing instead of alpha blending for foliage
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.5f);  // Only render pixels with alpha > 0.5
     
     // Bind the texture
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -468,10 +481,11 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glBegin(GL_QUADS);
     
     // Bottom left - Flip texture coordinates vertically to fix upside-down appearance
+    // Place pivot exactly at the bottom position (y)
     glTexCoord2f(0.0f, 1.0f);
     glVertex3f(
         x - right_x * half_width,
-        y, // Now at ground level
+        y, // Bottom position
         z - right_z * half_width
     );
     
@@ -479,7 +493,7 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     glTexCoord2f(1.0f, 1.0f);
     glVertex3f(
         x + right_x * half_width,
-        y, // Now at ground level
+        y, // Bottom position
         z + right_z * half_width
     );
     
@@ -501,8 +515,8 @@ void drawBillboard(float x, float y, float z, float width, float height, GLuint 
     
     glEnd();
     
-    // Disable texturing and blending
-    glDisable(GL_BLEND);
+    // Disable texturing and alpha test
+    glDisable(GL_ALPHA_TEST);
     glDisable(GL_TEXTURE_2D);
 }
 
@@ -1093,14 +1107,17 @@ void updateGameStats(GameState* game) {
     char buffer[50];
     
     // Update FPS text (updated once per second)
-    static Uint32 last_update = 0;
     Uint32 current_time = SDL_GetTicks();
     
-    if (current_time - last_update >= 1000) {
-        snprintf(buffer, sizeof(buffer), "FPS: %d", game->frame_count);
+    if (current_time - game->fps_last_time >= 1000) {
+        // Calculate the actual FPS based on frames rendered since last update
+        int fps = game->frame_count;
+        snprintf(buffer, sizeof(buffer), "FPS: %d", fps);
         updateTextElement(&game->game_ui, game->fps_text_id, buffer);
         
-        last_update = current_time;
+        // Reset frame counter and update the last time
+        game->frame_count = 0;
+        game->fps_last_time = current_time;
     }
 }
 
@@ -1205,12 +1222,6 @@ void renderGame(GameState* game) {
     
     // Increment frame counter
     game->frame_count++;
-    Uint32 current_ticks = SDL_GetTicks();
-    if (current_ticks - game->fps_last_time >= 1000) {
-        printf("FPS: %d\n", game->frame_count);
-        game->frame_count = 0;
-        game->fps_last_time = current_ticks;
-    }
 }
 
 // Main game loop
