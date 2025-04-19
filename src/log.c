@@ -76,8 +76,8 @@ void display_title(const char* game_title) {
     printf("\n\n");
     printf("%s╔════════════════════════════════════════════════════════════╗%s\n", COLOR_GREEN, COLOR_RESET);
     printf("%s║                                                            ║%s\n", COLOR_GREEN, COLOR_RESET);
-    printf("%s║                  %s%-40s%s  ║%s\n", COLOR_GREEN, COLOR_CYAN, game_title, COLOR_GREEN, COLOR_RESET);
-    printf("%s║                     %s© 2025 P1X GAMES%s                    ║%s\n", COLOR_GREEN, COLOR_YELLOW, COLOR_GREEN, COLOR_RESET);
+    printf("%s║        %s%-40s%s           ║%s\n", COLOR_GREEN, COLOR_CYAN, game_title, COLOR_GREEN, COLOR_RESET);
+    printf("%s║                     %s© 2025 P1X GAMES%s                       ║%s\n", COLOR_GREEN, COLOR_YELLOW, COLOR_GREEN, COLOR_RESET);
     printf("%s║                                                            ║%s\n", COLOR_GREEN, COLOR_RESET);
     printf("%s╚════════════════════════════════════════════════════════════╝%s\n", COLOR_GREEN, COLOR_RESET);
     printf("\n");
