@@ -4,6 +4,16 @@ Operation Dolphin: Echoes of the Mesozoic blends the chaos of the Vietnam War wi
 
 ![Gameplay Screenshot](media/gameplay.png)
 
+[Code](https://github.com/w84death/operation-dolphin) | [Homepage](https://smol.p1x.in/operation-dolphin)
+
+```
+git clone git@github.com:w84death/operation-dolphin.git
+```
+or
+```
+git clone https://github.com/w84death/operation-dolphin.git
+```
+
 ## Gameplay
 
 Operation Dolphin is a classic "boomershooter" in the tradition of 90s FPS games. Fast-paced, straightforward gameplay focuses on movement and shooting rather than cover systems or regenerating health. Players navigate through lush jungle environments while facing off against various engineered dinosaur threats.
