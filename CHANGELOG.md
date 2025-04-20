@@ -10,6 +10,8 @@ alpha3:
     - prepare for chunk world infinite rendering
     - reduced texture size for smaller foliage
     - updated textures
+    - terrain height
+    - save/load user settings
 
 alpha2:
     - proper day/night cycle (40% day,10% evening, 40% night, 10% morning)
