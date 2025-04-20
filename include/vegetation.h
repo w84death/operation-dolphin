@@ -20,7 +20,7 @@ struct Vegetation {
 };
 
 // Constants for max textures
-#define MAX_TEXTURES_PER_SIZE 16
+#define MAX_TEXTURES_PER_SIZE 64
 
 // Vegetation related functions
 void setGameStatePointer(void* game_ptr);

@@ -128,7 +128,6 @@ void renderItems(void) {
     // Save depth test state and temporarily disable depth writing for alpha blending
     GLboolean depthMask;
     glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
-    glDepthMask(GL_FALSE);
     
     // Render all items
     for (int i = 0; i < MAX_ITEMS; i++) {
@@ -238,59 +237,74 @@ static GLuint loadItemTexture(const char* texture_path) {
     return texture_id;
 }
 
-// Draw a billboard (quad that always faces the camera)
+// Draw a billboard (quad that always faces the camera) - Adapted from vegetation.c
 static void drawBillboard(float x, float y, float z, float width, float height, GLuint texture) {
     // Only draw if we have a valid texture
     if (texture == 0) return;
+
+    // Save the current matrix
+    glPushMatrix();
+    
+    // Position at the base of the billboard (adjust y slightly if needed, maybe y - height * 0.5f ?)
+    glTranslatef(x, y, z); // Using the item's center y for now
     
     // Get the current modelview matrix
     float modelview[16];
     glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
     
-    // Extract the right and up vectors from the modelview matrix
-    float right[3] = {modelview[0], modelview[4], modelview[8]};
-    float up[3] = {modelview[1], modelview[5], modelview[9]};
+    // Create a modelview matrix for the billboard that only contains position (removes rotation)
+    // This ensures the billboard always faces the camera plane
+    modelview[0] = 1.0f; modelview[1] = 0.0f; modelview[2] = 0.0f;
+    modelview[4] = 0.0f; modelview[5] = 1.0f; modelview[6] = 0.0f;
+    modelview[8] = 0.0f; modelview[9] = 0.0f; modelview[10] = 1.0f;
     
-    // Calculate the billboard corners
-    float half_width = width * 0.5f;
-    float half_height = height * 0.5f;
-        
-    // Bind the texture
-    glBindTexture(GL_TEXTURE_2D, texture);
+    // Load the modified matrix
+    glLoadMatrixf(modelview);
+    
+    // Enable texturing and proper alpha blending/testing
     glEnable(GL_TEXTURE_2D);
-    
-    // Enable alpha blending for transparent textures
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    // Disable depth test to ensure the item is always visible
-    glDisable(GL_DEPTH_TEST);
+    // Use alpha testing to discard fully transparent pixels
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.1f); // Adjust threshold if needed (0.1 to 0.5 is common)
     
-    // Draw the billboard quad
+    // Bind the texture
+    glBindTexture(GL_TEXTURE_2D, texture);
+    
+    // Half width and height for quad vertices
+    float half_width = width / 2.0f;
+    float half_height = height / 2.0f; // Draw centered around the y position
+    
+    // Draw quad centered around the origin (which is now at x, y, z)
     glBegin(GL_QUADS);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex3f(x - right[0] * half_width + up[0] * half_height,
-               y - right[1] * half_width + up[1] * half_height,
-               z - right[2] * half_width + up[2] * half_height);
     
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex3f(x + right[0] * half_width + up[0] * half_height,
-               y + right[1] * half_width + up[1] * half_height,
-               z + right[2] * half_width + up[2] * half_height);
+    // Bottom left 
+    glTexCoord2f(0.0f, 1.0f); // Flipped Y-coord like vegetation? Check item textures. Assuming standard for now.
+    glVertex3f(-half_width, -half_height, 0.0f); 
     
-    glTexCoord2f(1.0f, 1.0f);
-    glVertex3f(x + right[0] * half_width - up[0] * half_height,
-               y + right[1] * half_width - up[1] * half_height,
-               z + right[2] * half_width - up[2] * half_height);
+    // Bottom right
+    glTexCoord2f(1.0f, 1.0f); 
+    glVertex3f(half_width, -half_height, 0.0f);
     
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex3f(x - right[0] * half_width - up[0] * half_height,
-               y - right[1] * half_width - up[1] * half_height,
-               z - right[2] * half_width - up[2] * half_height);
+    // Top right
+    glTexCoord2f(1.0f, 0.0f); 
+    glVertex3f(half_width, half_height, 0.0f);
+    
+    // Top left
+    glTexCoord2f(0.0f, 0.0f); 
+    glVertex3f(-half_width, half_height, 0.0f);
+    
     glEnd();
     
-    // Restore OpenGL state
-    glEnable(GL_DEPTH_TEST);
+    // Restore state
+    glDisable(GL_ALPHA_TEST);
+    // glDepthMask(GL_TRUE); // Re-enable depth writing - handled by renderItems restoration
     glDisable(GL_BLEND);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture
+    
+    // Restore the previous matrix
+    glPopMatrix();
 }
