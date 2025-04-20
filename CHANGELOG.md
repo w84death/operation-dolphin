@@ -11,6 +11,8 @@ alpha5:
 
 alpha4:
     - items on the map (boxes to open)
+    - more foliage textures
+    - compass
 
 alpha3:
     - rewritten vegetation generation

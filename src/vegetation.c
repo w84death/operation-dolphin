@@ -71,7 +71,9 @@ bool loadVegetationTextures() {
         "textures/foliage/medium/bush4.tga",
         "textures/foliage/medium/weed1.tga",
         "textures/foliage/medium/weed2.tga",
-        "textures/foliage/medium/weed3.tga"    
+        "textures/foliage/medium/weed3.tga",
+        "textures/foliage/medium/fern1.tga",
+        "textures/foliage/medium/fern2.tga"
     };
     
     // Big vegetation textures (trees, palms, big rocks)
@@ -84,6 +86,10 @@ bool loadVegetationTextures() {
         "textures/foliage/big/tree2.tga",
         "textures/foliage/big/tree3.tga",
         "textures/foliage/big/tree4.tga",
+        "textures/foliage/big/tree5.tga",
+        "textures/foliage/big/tree6.tga",
+        "textures/foliage/big/tree7.tga",
+        "textures/foliage/big/tree8.tga",
         "textures/foliage/big/rock2.tga",
         "textures/foliage/big/rock4.tga",
         "textures/foliage/big/oldtree1.tga",
