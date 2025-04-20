@@ -20,6 +20,7 @@
 #include "../include/audio.h"
 #include "../include/vegetation.h"
 #include "../include/items.h"
+#include <math.h> // Include for fmodf
 
 // For the input system
 static InputState input;
@@ -282,30 +283,34 @@ bool initGame(GameState* game) {
     
     // Create compass UI elements
     int compass_center_x = WINDOW_WIDTH / 2;
+    float compass_y = COMPASS_Y_POSITION - 4.0f;
+
     // North indicator
     game->compass_n_id = createTextElement(&game->game_ui, COMPASS_NORTH, 
-                                          compass_center_x, COMPASS_Y_POSITION, 
+                                          compass_center_x - 50.0f, 
+                                          compass_y, 
                                           primary_color, TEXT_ALIGN_CENTER);
     
     // East indicator
     game->compass_e_id = createTextElement(&game->game_ui, COMPASS_EAST, 
-                                         compass_center_x + COMPASS_WIDTH/2 - COMPASS_CARDINAL_WIDTH/2, 
-                                         COMPASS_Y_POSITION, 
+                                         compass_center_x - 16.0f, 
+                                         compass_y, 
                                          primary_color, TEXT_ALIGN_CENTER);
     
     // South indicator
     game->compass_s_id = createTextElement(&game->game_ui, COMPASS_SOUTH, 
-                                         compass_center_x, COMPASS_Y_POSITION + COMPASS_HEIGHT, 
+                                         compass_center_x + 16.0f, 
+                                         compass_y,
                                          primary_color, TEXT_ALIGN_CENTER);
     
     // West indicator
     game->compass_w_id = createTextElement(&game->game_ui, COMPASS_WEST, 
-                                         compass_center_x - COMPASS_WIDTH/2 + COMPASS_CARDINAL_WIDTH/2, 
-                                         COMPASS_Y_POSITION, 
+                                         compass_center_x + 50.0f,
+                                         compass_y,
                                          primary_color, TEXT_ALIGN_CENTER);
     
-    // Indicator line (this will be a simple "-" positioned according to player direction)
-    game->compass_indicator_id = createTextElement(&game->game_ui, "o", 
+    // Indicator line (wider)
+    game->compass_indicator_id = createTextElement(&game->game_ui, "-o-",
                                                  compass_center_x, COMPASS_Y_POSITION + COMPASS_LINE_HEIGHT, 
                                                  secondary_color, TEXT_ALIGN_CENTER);
     
@@ -1018,7 +1023,7 @@ void cleanupGame(GameState* game) {
 // Update compass UI based on player's direction
 void updateCompassUI(GameState* game) {
     if (game->menu_state == MENU_NONE && game->game_started) {
-        int compass_center_x = WINDOW_WIDTH / 2;
+        int compass_center_x = game->window_width / 2; // Use dynamic window width
         
         // Calculate the position of the compass indicator based on player's yaw
         float relative_angle = game->player.yaw;
@@ -1027,20 +1032,11 @@ void updateCompassUI(GameState* game) {
         while (relative_angle < 0) relative_angle += 360.0f;
         while (relative_angle >= 360) relative_angle -= 360.0f;
         
-        // Convert to a position in the compass UI (-1 to +1 range, where 0 is north)
-        float position = relative_angle / 180.0f - 1.0f; // Maps 0-360 to -1 to 1
+        float norm_angle = relative_angle / 360.0f;
+        float position = fmodf(norm_angle + 0.5f, 1.0f) * 2.0f - 1.0f;
         
-        // Calculate the X position on screen for the indicator
         int indicator_x = compass_center_x + (int)(position * COMPASS_WIDTH/2);
-        
-        // Ensure the indicator stays within compass bounds
-        if (indicator_x < compass_center_x - COMPASS_WIDTH/2) 
-            indicator_x = compass_center_x - COMPASS_WIDTH/2;
-        if (indicator_x > compass_center_x + COMPASS_WIDTH/2) 
-            indicator_x = compass_center_x + COMPASS_WIDTH/2;
-            
-        // Update the compass indicator position
-        setElementPosition(&game->game_ui, game->compass_indicator_id, indicator_x, COMPASS_Y_POSITION + COMPASS_LINE_HEIGHT);
+        setElementPosition(&game->game_ui, game->compass_indicator_id, indicator_x, COMPASS_Y_POSITION + COMPASS_LINE_HEIGHT); 
     }
 }
 
@@ -1049,27 +1045,36 @@ void toggleFullscreen(GameState* game, bool fullscreen) {
     // Update state flags
     game->fullscreen = fullscreen;
     game->settings.fullscreen = fullscreen;
-    
+
     if (fullscreen) {
-        // Store the current window size before going fullscreen
-        SDL_GetWindowSize(game->window, &game->window_width, &game->window_height);
-        
+        // Store the current window size before going fullscreen (optional, might not be needed)
+        // SDL_GetWindowSize(game->window, &game->window_width, &game->window_height);
+
         // For fullscreen, use SDL_WINDOW_FULLSCREEN_DESKTOP for better compatibility
         if (SDL_SetWindowFullscreen(game->window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
             logError("Error switching to fullscreen: %s", SDL_GetError());
+            // Revert state if failed?
+            game->fullscreen = false;
+            game->settings.fullscreen = false;
+            return; // Exit if failed
         }
-        
+
         // Get the new resolution after switching to fullscreen
         int new_width, new_height;
         SDL_GetWindowSize(game->window, &new_width, &new_height);
-        
+
+        // *** ADDED: Update game state with new dimensions ***
+        game->window_width = new_width;
+        game->window_height = new_height;
+
         // Update UI positions based on new resolution
         repositionUI(&game->game_ui, new_width, new_height);
         repositionUI(&game->menu_ui, new_width, new_height);
-        
+        repositionUI(&game->version_ui, new_width, new_height); // Also reposition version UI
+
         // Update OpenGL viewport
         glViewport(0, 0, new_width, new_height);
-        
+
         // Update projection matrix for the new aspect ratio
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
@@ -1081,24 +1086,33 @@ void toggleFullscreen(GameState* game, bool fullscreen) {
         float fW = fH * aspect;
         glFrustum(-fW, fW, -fH, fH, near, far);
         glMatrixMode(GL_MODELVIEW);
-        
+
         logInfo("Switched to fullscreen: %dx%d", new_width, new_height);
     } else {
         // Return to windowed mode with original dimensions
         if (SDL_SetWindowFullscreen(game->window, 0) != 0) {
             logError("Error switching to windowed mode: %s", SDL_GetError());
+            // Revert state if failed?
+            game->fullscreen = true;
+            game->settings.fullscreen = true;
+            return; // Exit if failed
         }
-        
+
         // Restore original window size
         SDL_SetWindowSize(game->window, WINDOW_WIDTH, WINDOW_HEIGHT);
-        
+
+        // *** ADDED: Update game state with original dimensions ***
+        game->window_width = WINDOW_WIDTH;
+        game->window_height = WINDOW_HEIGHT;
+
         // Update UI positions based on original resolution
         repositionUI(&game->game_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
         repositionUI(&game->menu_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
-        
+        repositionUI(&game->version_ui, WINDOW_WIDTH, WINDOW_HEIGHT); // Also reposition version UI
+
         // Update OpenGL viewport
         glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-        
+
         // Update projection matrix for the original aspect ratio
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
@@ -1110,10 +1124,10 @@ void toggleFullscreen(GameState* game, bool fullscreen) {
         float fW = fH * aspect;
         glFrustum(-fW, fW, -fH, fH, near, far);
         glMatrixMode(GL_MODELVIEW);
-        
+
         logInfo("Switched to windowed mode: %dx%d", WINDOW_WIDTH, WINDOW_HEIGHT);
     }
-    
+
     // Save settings after change
     saveSettings(&game->settings);
 }

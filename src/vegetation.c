@@ -61,13 +61,17 @@ bool loadVegetationTextures() {
         "textures/foliage/medium/flower6.tga",
         "textures/foliage/medium/flower7.tga",
         "textures/foliage/medium/flower8.tga",
+        "textures/foliage/medium/flower9.tga",
+        "textures/foliage/medium/flower10.tga",
+        "textures/foliage/medium/flower11.tga",
+        "textures/foliage/medium/flower12.tga",
         "textures/foliage/medium/bush1.tga",
         "textures/foliage/medium/bush2.tga",
         "textures/foliage/medium/bush3.tga",
         "textures/foliage/medium/bush4.tga",
         "textures/foliage/medium/weed1.tga",
         "textures/foliage/medium/weed2.tga",
-        "textures/foliage/medium/weed3.tga"      
+        "textures/foliage/medium/weed3.tga"    
     };
     
     // Big vegetation textures (trees, palms, big rocks)
@@ -81,7 +85,12 @@ bool loadVegetationTextures() {
         "textures/foliage/big/tree3.tga",
         "textures/foliage/big/tree4.tga",
         "textures/foliage/big/rock2.tga",
-        "textures/foliage/big/rock4.tga"
+        "textures/foliage/big/rock4.tga",
+        "textures/foliage/big/oldtree1.tga",
+        "textures/foliage/big/oldtree2.tga",
+        "textures/foliage/big/oldtree3.tga",
+        "textures/foliage/big/oldtree4.tga",
+        "textures/foliage/big/oldtree5.tga"
     };
     
     // Load small textures
