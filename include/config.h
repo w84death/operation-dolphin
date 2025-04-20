@@ -151,11 +151,12 @@
 #define VEGETATION_DENSITY_SMALL 1.0f  // Multiplier for small vegetation
 #define VEGETATION_DENSITY_MEDIUM 0.25f  // Multiplier for medium vegetation
 #define VEGETATION_DENSITY_BIG 0.05f  // Multiplier for big vegetation
-#define FOLIAGE_DEFAULT_SEED 12345    // Default seed for vegetation generation
+#define FOLIAGE_DEFAULT_SEED 1337    // Default seed for vegetation generation
 
 // Font settings
 #define GAME_FONT_FILE "fonts/NovaSquare-Regular.ttf"
 #define MENU_FONT_SIZE 40
+#define VERSION_FONT_SIZE 16  // Half size font for version text
 #define GAME_UI_FONT_SIZE 20  // Smaller size for game UI elements
 
 // UI Color settings
@@ -205,5 +206,15 @@
 #define COMPASS_EAST "E"
 #define COMPASS_SOUTH "S"
 #define COMPASS_WEST "W"
+
+// Item settings
+#define MAX_ITEMS 10
+#define ITEM_INTERACTION_RANGE 2.0f
+#define ITEM_BOX_WIDTH 2.0f  // Increased significantly for better visibility
+#define ITEM_BOX_HEIGHT 2.0f // Increased significantly for better visibility
+#define ITEM_BOX_TEXTURE_CLOSED "textures/items/box_closed.tga"
+#define ITEM_BOX_TEXTURE_OPEN "textures/items/box_open.tga"
+#define ITEM_AMMO_TEXTURE_CLOSED "textures/items/ammo_closed.tga"
+#define ITEM_AMMO_TEXTURE_OPEN "textures/items/ammo_open.tga"
 
 #endif // CONFIG_H

@@ -1,9 +1,16 @@
 FUTURE PLANS:
+    - [todo] items to open on the map
     - [todo] night-vision google
     - [todo] enemies engine
     - [todo] actual enemies with some hunting logic
     - [todo] stealth movement
     - [todo] end game
+
+alpha5:
+    - TBD 
+
+alpha4:
+    - items on the map (boxes to open)
 
 alpha3:
     - rewritten vegetation generation
@@ -12,6 +19,7 @@ alpha3:
     - updated textures
     - terrain height
     - save/load user settings
+    - better fullscreen handling
 
 alpha2:
     - proper day/night cycle (40% day,10% evening, 40% night, 10% morning)

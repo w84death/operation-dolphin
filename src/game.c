@@ -19,6 +19,7 @@
 #include "../include/log.h"
 #include "../include/audio.h"
 #include "../include/vegetation.h"
+#include "../include/items.h"
 
 // For the input system
 static InputState input;
@@ -219,6 +220,14 @@ bool initGame(GameState* game) {
     initEnvironment();
     setBackgroundColor(BG_COLOR_R, BG_COLOR_G, BG_COLOR_B, BG_COLOR_A);
     
+    // Initialize items system
+    if (!initItems()) {
+        logError("Failed to initialize items system\n");
+        return false;
+    } else {
+        logInfo("Items system initialized successfully\n");
+    }
+    
     // Initialize UI system with smaller font size for game UI
     if (!initUI(&game->game_ui, GAME_FONT_FILE, GAME_UI_FONT_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT)) {
         logError("Failed to initialize game UI system\n");
@@ -236,6 +245,17 @@ bool initGame(GameState* game) {
     } else {
         logInfo("Menu UI system initialized successfully with font: %s (size %d)\n", 
                GAME_FONT_FILE, MENU_FONT_SIZE);
+    }
+    
+    // Initialize specialized UI system for version text with half size font
+    if (!initUI(&game->version_ui, GAME_FONT_FILE, VERSION_FONT_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT)) {
+        logError("Failed to initialize version UI system\n");
+        cleanupUI(&game->game_ui);
+        cleanupUI(&game->menu_ui);
+        return false;
+    } else {
+        logInfo("Version UI system initialized successfully with font: %s (size %d)\n", 
+               GAME_FONT_FILE, VERSION_FONT_SIZE);
     }
     
     // Initialize audio system
@@ -341,6 +361,9 @@ void resetGame(GameState* game) {
     cleanupVegetation();
     createVegetation(vegetation_count, TERRAIN_TILE_SIZE);
     
+    // Create items (boxes and ammo boxes) for the player to find
+    createItems(10, TERRAIN_TILE_SIZE, (Terrain*)game->terrain);
+    
     // Reset game state flags
     game->game_started = true;
     game->game_paused = false;
@@ -377,9 +400,9 @@ void initMenu(GameState* game) {
                                            WINDOW_WIDTH / 2, WINDOW_HEIGHT / 4, 
                                            primary_color, TEXT_ALIGN_CENTER);
     
-    // Create version text element below the title
-    game->menu_version_id = createTextElement(&game->menu_ui, GAME_ENGINE_VERSION,
-                                            WINDOW_WIDTH / 2, WINDOW_HEIGHT / 4 + 30,
+    // Create version text element below the title using the smaller font system
+    game->menu_version_id = createTextElement(&game->version_ui, GAME_ENGINE_VERSION,
+                                            WINDOW_WIDTH / 2, WINDOW_HEIGHT - 30,
                                             version_color, TEXT_ALIGN_CENTER);
     
     // Create main menu items - initially all primary_color, will update colors based on selection
@@ -828,6 +851,9 @@ void updateGame(GameState* game, float delta_time) {
         // Update player
         updatePlayer(&game->player, delta_time);
         
+        // Check for collisions with items (boxes and ammo boxes)
+        checkItemCollisions(&game->player);
+        
         // Handle foliage cutting if player is in cutting animation
         if (game->player.is_cutting) {
             cutMediumFoliage(&game->player);
@@ -898,6 +924,9 @@ void renderGame(GameState* game) {
     // Render vegetation
     renderVegetation();
     
+    // Render items
+    renderItems();
+    
     // Render particles
     renderParticles();
     
@@ -913,6 +942,7 @@ void renderGame(GameState* game) {
     // Render UI systems - game UI and menu UI
     renderUI(&game->game_ui);
     renderUI(&game->menu_ui);
+    renderUI(&game->version_ui);  // Render the version UI with smaller font
     
     // Swap buffers
     SDL_GL_SwapWindow(game->window);
@@ -968,12 +998,16 @@ void cleanupGame(GameState* game) {
     // Free vegetation
     cleanupVegetation();
     
+    // Clean up items system
+    cleanupItems();
+    
     // Clean up audio system
     cleanupAudio(&game->audio);
     
     // Clean up UI system
     cleanupUI(&game->game_ui);
     cleanupUI(&game->menu_ui);
+    cleanupUI(&game->version_ui);  // Clean up the version UI system
     
     // Clean up SDL resources
     SDL_GL_DeleteContext(game->gl_context);

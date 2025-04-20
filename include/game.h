@@ -56,6 +56,7 @@ typedef struct {
     // UI Systems - separate UI systems for game and menu
     UISystem game_ui;    // Smaller font for in-game UI
     UISystem menu_ui;    // Larger font for menu UI
+    UISystem version_ui;  // Special UI system for version text with smaller font
     
     int fps_text_id;
     
