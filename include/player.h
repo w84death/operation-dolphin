@@ -28,6 +28,9 @@ typedef struct {
     float jump_velocity;
     float gravity;
     
+    // Terrain reference for height checks
+    void* terrain;     // Pointer to terrain for height checks
+    
     // Weapon/interaction
     GLuint weapon_texture_id;  // Texture ID for 2D weapon instead of 3D model
     int weapon_frame;          // Current animation frame (0, 1, or 2)

@@ -190,11 +190,19 @@ bool initGame(GameState* game) {
     float fW = fH * aspect;
     glFrustum(-fW, fW, -fH, fH, near, far);
     
+    // Initialize terrain system
+    game->terrain = createFlatTerrain(TERRAIN_TILE_SIZE, TERRAIN_HEIGHT_SCALE);
+    
     // Initialize the player
     initPlayer(&game->player);
     
-    // Initialize terrain system
-    game->terrain = createFlatTerrain(TERRAIN_TILE_SIZE, TERRAIN_HEIGHT_SCALE);
+    // Set the terrain reference in the player structure
+    game->player.terrain = game->terrain;
+    
+    // Set initial player position based on terrain height
+    float initial_terrain_height = getHeightAtPoint((Terrain*)game->terrain, 0.0f, 0.0f);
+    game->player.position_y = initial_terrain_height + game->player.eye_height;
+    game->player.ground_level = initial_terrain_height;
     
     // Load vegetation textures
     if (!loadVegetationTextures()) {

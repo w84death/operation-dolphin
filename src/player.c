@@ -4,6 +4,7 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include "../include/player.h"
+#include "../include/terrain.h" // Add terrain header for height checks
 #include "../include/config.h"
 #include "../include/log.h"
 #include "../stb_image.h" // Include stb_image for texture loading
@@ -139,27 +140,75 @@ void initPlayer(Player *player) {
 
 // Update player state based on time
 void updatePlayer(Player *player, float delta_time) {
+    // If we have a valid terrain reference, get the current ground height at player position
+    if (player->terrain) {
+        // Get the terrain height at the player's current position
+        float terrain_height = getHeightAtPoint((Terrain*)player->terrain, player->position_x, player->position_z);
+        
+        // Update the player's ground level based on the terrain
+        player->ground_level = terrain_height;
+    }
+    
     // Apply gravity if not on ground
     if (player->position_y > player->ground_level + player->height * 0.5f) {
         player->velocity_y -= player->gravity * delta_time;
     } else {
-        // On ground, stop falling
+        // On ground, stop falling and match the terrain height
         player->position_y = player->ground_level + player->height * 0.5f;
         player->velocity_y = 0;
         player->is_jumping = false;
     }
+    
+    // Store current position to check if the player moved
+    float prev_x = player->position_x;
+    float prev_z = player->position_z;
     
     // Apply velocity to position
     player->position_x += player->velocity_x * delta_time;
     player->position_y += player->velocity_y * delta_time;
     player->position_z += player->velocity_z * delta_time;
     
+    // If the player moved horizontally and is on the ground, adjust height to follow terrain
+    if ((prev_x != player->position_x || prev_z != player->position_z) && 
+        player->terrain && !player->is_jumping) {
+        
+        // Get new terrain height at updated position
+        float new_terrain_height = getHeightAtPoint((Terrain*)player->terrain, 
+                                                  player->position_x, player->position_z);
+        
+        // Calculate height difference
+        float height_diff = new_terrain_height - player->ground_level;
+        
+        // If the slope is too steep (more than 45 degrees), limit movement
+        const float MAX_SLOPE_CHANGE = 0.75f;  // Maximum height change per movement step
+        
+        if (fabsf(height_diff) > MAX_SLOPE_CHANGE) {
+            // Slope is too steep, reduce horizontal movement
+            float scale = MAX_SLOPE_CHANGE / fabsf(height_diff);
+            
+            // Scale back the position change
+            player->position_x = prev_x + (player->position_x - prev_x) * scale;
+            player->position_z = prev_z + (player->position_z - prev_z) * scale;
+            
+            // Recalculate terrain height at the adjusted position
+            new_terrain_height = getHeightAtPoint((Terrain*)player->terrain, 
+                                               player->position_x, player->position_z);
+        }
+        
+        // Update ground level with the new terrain height
+        player->ground_level = new_terrain_height;
+        
+        // If on ground, adjust player's y position to match terrain
+        if (!player->is_jumping) {
+            player->position_y = player->ground_level + player->height * 0.5f;
+        }
+    }
+    
     // Dampen horizontal velocity (friction)
     player->velocity_x *= 0.9f;
     player->velocity_z *= 0.9f;
     
     // Clamp pitch to respect PLAYER_MAXIMUM_VERTICAL_ROT from config.h
-    // Convert from 0-160 range to +/- degrees
     float half_angle = PLAYER_MAXIMUM_VERTICAL_ROT / 2.0f;
     if (player->pitch > half_angle) player->pitch = half_angle;
     if (player->pitch < -half_angle) player->pitch = -half_angle;
