@@ -8,6 +8,8 @@ FUTURE PLANS:
 alpha3:
     - rewritten vegetation generation
     - prepare for chunk world infinite rendering
+    - reduced texture size for smaller foliage
+    - updated textures
 
 alpha2:
     - proper day/night cycle (40% day,10% evening, 40% night, 10% morning)

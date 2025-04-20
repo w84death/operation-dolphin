@@ -26,6 +26,48 @@ static InputState input;
 // Global pointer to current game state (for input handling)
 GameState *game_state_ptr = NULL;
 
+// Save user settings to a configuration file
+bool saveSettings(GameSettings* settings) {
+    FILE* file = fopen(SETTINGS_FILE_PATH, "wb");
+    if (file == NULL) {
+        logError("Failed to open settings file for writing: %s", SETTINGS_FILE_PATH);
+        return false;
+    }
+
+    // Write settings structure to file
+    size_t written = fwrite(settings, sizeof(GameSettings), 1, file);
+    fclose(file);
+
+    if (written != 1) {
+        logError("Failed to write settings to file: %s", SETTINGS_FILE_PATH);
+        return false;
+    }
+
+    logInfo("Settings saved successfully to: %s", SETTINGS_FILE_PATH);
+    return true;
+}
+
+// Load user settings from a configuration file
+bool loadSettings(GameSettings* settings) {
+    FILE* file = fopen(SETTINGS_FILE_PATH, "rb");
+    if (file == NULL) {
+        logInfo("Settings file not found, using defaults: %s", SETTINGS_FILE_PATH);
+        return false;
+    }
+
+    // Read settings structure from file
+    size_t read = fread(settings, sizeof(GameSettings), 1, file);
+    fclose(file);
+
+    if (read != 1) {
+        logError("Failed to read settings from file: %s", SETTINGS_FILE_PATH);
+        return false;
+    }
+
+    logInfo("Settings loaded successfully from: %s", SETTINGS_FILE_PATH);
+    return true;
+}
+
 // Initialize the game state and resources
 bool initGame(GameState* game) {
     // Set global pointer to current game state (for input handling)
@@ -39,7 +81,8 @@ bool initGame(GameState* game) {
 
     // Initialize game state
     game->running = true;
-    game->fullscreen = false;
+    // Default to fullscreen - this is a change from previous windowed default
+    game->fullscreen = true;
     game->game_started = false;
     game->game_paused = false;
     game->last_time = SDL_GetTicks() / 1000.0f;
@@ -49,6 +92,19 @@ bool initGame(GameState* game) {
     // Initialize window size from config
     game->window_width = WINDOW_WIDTH;
     game->window_height = WINDOW_HEIGHT;
+    
+    // Initialize default settings with new fullscreen default
+    game->settings.sound_enabled = true;
+    game->settings.high_terrain_features = true;
+    game->settings.invert_y_axis = MOUSE_INVERT_Y_DEFAULT;
+    game->settings.fullscreen = true; // Default to fullscreen
+    
+    // Try to load settings from file
+    if (loadSettings(&game->settings)) {
+        // Apply loaded fullscreen setting to the game state
+        game->fullscreen = game->settings.fullscreen;
+        logInfo("Applied saved settings");
+    }
     
     // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
@@ -62,10 +118,15 @@ bool initGame(GameState* game) {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     
-    // Create window with OpenGL context
+    // Create window with OpenGL context - set flags based on fullscreen mode
     Uint32 window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN;
+    
+    // Add fullscreen flag directly at window creation if needed
     if (game->fullscreen) {
-        window_flags |= SDL_WINDOW_FULLSCREEN;
+        window_flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+        logInfo("Creating window in fullscreen mode");
+    } else {
+        logInfo("Creating window in windowed mode");
     }
     
     game->window = SDL_CreateWindow(
@@ -80,6 +141,15 @@ bool initGame(GameState* game) {
         return false;
     }
     
+    // If we're in fullscreen, get the actual dimensions to update our viewport
+    if (game->fullscreen) {
+        int actual_width, actual_height;
+        SDL_GetWindowSize(game->window, &actual_width, &actual_height);
+        game->window_width = actual_width;
+        game->window_height = actual_height;
+        logInfo("Fullscreen resolution: %dx%d", actual_width, actual_height);
+    }
+    
     // Create OpenGL context
     game->gl_context = SDL_GL_CreateContext(game->window);
     if (game->gl_context == NULL) {
@@ -92,7 +162,7 @@ bool initGame(GameState* game) {
         logWarning("Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError());
     }
     
-    // Initialize OpenGL
+    // Initialize OpenGL - use actual window dimensions
     glViewport(0, 0, game->window_width, game->window_height);
     
     glClearColor(BG_COLOR_R, BG_COLOR_G, BG_COLOR_B, BG_COLOR_A);
@@ -110,7 +180,7 @@ bool initGame(GameState* game) {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     
-    // Calculate aspect ratio and set perspective
+    // Calculate aspect ratio and set perspective using actual dimensions
     float aspect = (float)game->window_width / (float)game->window_height;
     float fov = CAMERA_FOV;
     float near = CAMERA_NEAR;
@@ -131,13 +201,7 @@ bool initGame(GameState* game) {
         return false;
     }
     
-    // Initialize settings before creating vegetation (to ensure settings are applied)
-    game->settings.sound_enabled = true;
-    game->settings.high_terrain_features = true;
-    game->settings.invert_y_axis = MOUSE_INVERT_Y_DEFAULT;
-    game->settings.fullscreen = game->fullscreen;
-    
-    // Create vegetation with the appropriate density based on quality setting
+    // Create vegetation with the appropriate density based on loaded quality setting
     int vegetation_count = game->settings.high_terrain_features ? 
                           TERRAIN_MAX_FEATURES : TERRAIN_MAX_FEATURES / 2;
     createVegetation(vegetation_count, TERRAIN_TILE_SIZE);
@@ -171,6 +235,12 @@ bool initGame(GameState* game) {
         return false;
     } else {
         logInfo("Audio system initialized successfully\n");
+        
+        // Apply sound setting immediately after audio initialization
+        if (!game->settings.sound_enabled) {
+            pauseBackgroundMusic(&game->audio);
+            logInfo("Music disabled based on user settings");
+        }
     }
     
     // Create UI elements
@@ -226,6 +296,11 @@ bool initGame(GameState* game) {
     // Initialize input system
     initInput(&input);
     
+    // Apply fullscreen setting if needed using our consistent function
+    if (game->fullscreen) {
+        toggleFullscreen(game, true);
+    }
+    
     return true;
 }
 
@@ -262,12 +337,6 @@ void initMenu(GameState* game) {
     game->selected_menu_item = 0;
     game->menu_item_count = 4; // Main menu has 4 items: Resume, New Game, Settings, Quit
     game->game_paused = false;
-    
-    // Initialize default settings
-    game->settings.sound_enabled = true;
-    game->settings.high_terrain_features = true;
-    game->settings.invert_y_axis = MOUSE_INVERT_Y_DEFAULT;  // Initialize with default from config
-    game->settings.fullscreen = game->fullscreen; // Initialize with current fullscreen state
     
     // Start playing menu music if sound is enabled
     if (game->settings.sound_enabled) {
@@ -565,6 +634,8 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         int new_count = game->settings.high_terrain_features ? 
                                        TERRAIN_MAX_FEATURES : TERRAIN_MAX_FEATURES / 2;
                         createVegetation(new_count, TERRAIN_TILE_SIZE);
+                        // Save settings after change
+                        saveSettings(&game->settings);
                         break;
                         
                     case 1: // SOUND
@@ -578,80 +649,19 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         } else {
                             pauseBackgroundMusic(&game->audio);
                         }
+                        // Save settings after change
+                        saveSettings(&game->settings);
                         break;
                         
                     case 2: // INVERT Y AXIS
                         game->settings.invert_y_axis = !game->settings.invert_y_axis;
+                        // Save settings after change
+                        saveSettings(&game->settings);
                         break;
                         
                     case 3: // FULLSCREEN
-                        // Toggle fullscreen using the same function as F11
-                        game->fullscreen = !game->fullscreen;
-                        game->settings.fullscreen = game->fullscreen;
-                        
-                        if (game->fullscreen) {
-                            // Store the current window size before going fullscreen
-                            SDL_GetWindowSize(game->window, &game->window_width, &game->window_height);
-                            
-                            // For fullscreen, use SDL_WINDOW_FULLSCREEN_DESKTOP for better compatibility
-                            if (SDL_SetWindowFullscreen(game->window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
-                                logError("Error switching to fullscreen: %s", SDL_GetError());
-                            }
-                            
-                            // Get the new resolution after switching to fullscreen
-                            int new_width, new_height;
-                            SDL_GetWindowSize(game->window, &new_width, &new_height);
-                            
-                            // Update UI positions based on new resolution
-                            repositionUI(&game->game_ui, new_width, new_height);
-                            repositionUI(&game->menu_ui, new_width, new_height);
-                            
-                            // Update OpenGL viewport
-                            glViewport(0, 0, new_width, new_height);
-                            
-                            // Update projection matrix for the new aspect ratio
-                            glMatrixMode(GL_PROJECTION);
-                            glLoadIdentity();
-                            float aspect = (float)new_width / (float)new_height;
-                            float fov = CAMERA_FOV;
-                            float near = CAMERA_NEAR;
-                            float far = CAMERA_FAR;
-                            float fH = tan(fov * 3.14159f / 360.0f) * near;
-                            float fW = fH * aspect;
-                            glFrustum(-fW, fW, -fH, fH, near, far);
-                            glMatrixMode(GL_MODELVIEW);
-                            
-                            logInfo("Switched to fullscreen: %dx%d", new_width, new_height);
-                        } else {
-                            // Return to windowed mode with original dimensions
-                            if (SDL_SetWindowFullscreen(game->window, 0) != 0) {
-                                logError("Error switching to windowed mode: %s", SDL_GetError());
-                            }
-                            
-                            // Restore original window size
-                            SDL_SetWindowSize(game->window, WINDOW_WIDTH, WINDOW_HEIGHT);
-                            
-                            // Update UI positions based on original resolution
-                            repositionUI(&game->game_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
-                            repositionUI(&game->menu_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
-                            
-                            // Update OpenGL viewport
-                            glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-                            
-                            // Update projection matrix for the original aspect ratio
-                            glMatrixMode(GL_PROJECTION);
-                            glLoadIdentity();
-                            float aspect = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
-                            float fov = CAMERA_FOV;
-                            float near = CAMERA_NEAR;
-                            float far = CAMERA_FAR;
-                            float fH = tan(fov * 3.14159f / 360.0f) * near;
-                            float fW = fH * aspect;
-                            glFrustum(-fW, fW, -fH, fH, near, far);
-                            glMatrixMode(GL_MODELVIEW);
-                            
-                            logInfo("Switched to windowed mode: %dx%d", WINDOW_WIDTH, WINDOW_HEIGHT);
-                        }
+                        // Toggle fullscreen using our unified function
+                        toggleFullscreen(game, !game->fullscreen);
                         break;
                 }
                 updateMenuUI(game);
@@ -668,6 +678,8 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         int new_count = game->settings.high_terrain_features ? 
                                        TERRAIN_MAX_FEATURES : TERRAIN_MAX_FEATURES / 2;
                         createVegetation(new_count, TERRAIN_TILE_SIZE);
+                        // Save settings after change
+                        saveSettings(&game->settings);
                         break;
                         
                     case 1: // SOUND
@@ -681,80 +693,19 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         } else {
                             pauseBackgroundMusic(&game->audio);
                         }
+                        // Save settings after change
+                        saveSettings(&game->settings);
                         break;
                         
                     case 2: // INVERT Y AXIS
                         game->settings.invert_y_axis = !game->settings.invert_y_axis;
+                        // Save settings after change
+                        saveSettings(&game->settings);
                         break;
                         
                     case 3: // FULLSCREEN
-                        // Toggle fullscreen using the same function as F11
-                        game->fullscreen = !game->fullscreen;
-                        game->settings.fullscreen = game->fullscreen;
-                        
-                        if (game->fullscreen) {
-                            // Store the current window size before going fullscreen
-                            SDL_GetWindowSize(game->window, &game->window_width, &game->window_height);
-                            
-                            // For fullscreen, use SDL_WINDOW_FULLSCREEN_DESKTOP for better compatibility
-                            if (SDL_SetWindowFullscreen(game->window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
-                                logError("Error switching to fullscreen: %s", SDL_GetError());
-                            }
-                            
-                            // Get the new resolution after switching to fullscreen
-                            int new_width, new_height;
-                            SDL_GetWindowSize(game->window, &new_width, &new_height);
-                            
-                            // Update UI positions based on new resolution
-                            repositionUI(&game->game_ui, new_width, new_height);
-                            repositionUI(&game->menu_ui, new_width, new_height);
-                            
-                            // Update OpenGL viewport
-                            glViewport(0, 0, new_width, new_height);
-                            
-                            // Update projection matrix for the new aspect ratio
-                            glMatrixMode(GL_PROJECTION);
-                            glLoadIdentity();
-                            float aspect = (float)new_width / (float)new_height;
-                            float fov = CAMERA_FOV;
-                            float near = CAMERA_NEAR;
-                            float far = CAMERA_FAR;
-                            float fH = tan(fov * 3.14159f / 360.0f) * near;
-                            float fW = fH * aspect;
-                            glFrustum(-fW, fW, -fH, fH, near, far);
-                            glMatrixMode(GL_MODELVIEW);
-                            
-                            logInfo("Switched to fullscreen: %dx%d", new_width, new_height);
-                        } else {
-                            // Return to windowed mode with original dimensions
-                            if (SDL_SetWindowFullscreen(game->window, 0) != 0) {
-                                logError("Error switching to windowed mode: %s", SDL_GetError());
-                            }
-                            
-                            // Restore original window size
-                            SDL_SetWindowSize(game->window, WINDOW_WIDTH, WINDOW_HEIGHT);
-                            
-                            // Update UI positions based on original resolution
-                            repositionUI(&game->game_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
-                            repositionUI(&game->menu_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
-                            
-                            // Update OpenGL viewport
-                            glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-                            
-                            // Update projection matrix for the original aspect ratio
-                            glMatrixMode(GL_PROJECTION);
-                            glLoadIdentity();
-                            float aspect = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
-                            float fov = CAMERA_FOV;
-                            float near = CAMERA_NEAR;
-                            float far = CAMERA_FAR;
-                            float fH = tan(fov * 3.14159f / 360.0f) * near;
-                            float fW = fH * aspect;
-                            glFrustum(-fW, fW, -fH, fH, near, far);
-                            glMatrixMode(GL_MODELVIEW);
-                            
-                            logInfo("Switched to windowed mode: %dx%d", WINDOW_WIDTH, WINDOW_HEIGHT);
-                        }
+                        // Toggle fullscreen using our unified function
+                        toggleFullscreen(game, !game->fullscreen);
                         break;
                 }
                 updateMenuUI(game);
@@ -971,6 +922,9 @@ void gameLoop(GameState* game) {
 
 // Clean up game resources
 void cleanupGame(GameState* game) {
+    // Save settings before exit
+    saveSettings(&game->settings);
+    
     // Clean up player resources
     cleanupPlayer(&game->player);
     
@@ -1020,4 +974,78 @@ void updateCompassUI(GameState* game) {
         // Update the compass indicator position
         setElementPosition(&game->game_ui, game->compass_indicator_id, indicator_x, COMPASS_Y_POSITION + COMPASS_LINE_HEIGHT);
     }
+}
+
+// Toggle fullscreen mode with consistent behavior
+void toggleFullscreen(GameState* game, bool fullscreen) {
+    // Update state flags
+    game->fullscreen = fullscreen;
+    game->settings.fullscreen = fullscreen;
+    
+    if (fullscreen) {
+        // Store the current window size before going fullscreen
+        SDL_GetWindowSize(game->window, &game->window_width, &game->window_height);
+        
+        // For fullscreen, use SDL_WINDOW_FULLSCREEN_DESKTOP for better compatibility
+        if (SDL_SetWindowFullscreen(game->window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
+            logError("Error switching to fullscreen: %s", SDL_GetError());
+        }
+        
+        // Get the new resolution after switching to fullscreen
+        int new_width, new_height;
+        SDL_GetWindowSize(game->window, &new_width, &new_height);
+        
+        // Update UI positions based on new resolution
+        repositionUI(&game->game_ui, new_width, new_height);
+        repositionUI(&game->menu_ui, new_width, new_height);
+        
+        // Update OpenGL viewport
+        glViewport(0, 0, new_width, new_height);
+        
+        // Update projection matrix for the new aspect ratio
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        float aspect = (float)new_width / (float)new_height;
+        float fov = CAMERA_FOV;
+        float near = CAMERA_NEAR;
+        float far = CAMERA_FAR;
+        float fH = tan(fov * 3.14159f / 360.0f) * near;
+        float fW = fH * aspect;
+        glFrustum(-fW, fW, -fH, fH, near, far);
+        glMatrixMode(GL_MODELVIEW);
+        
+        logInfo("Switched to fullscreen: %dx%d", new_width, new_height);
+    } else {
+        // Return to windowed mode with original dimensions
+        if (SDL_SetWindowFullscreen(game->window, 0) != 0) {
+            logError("Error switching to windowed mode: %s", SDL_GetError());
+        }
+        
+        // Restore original window size
+        SDL_SetWindowSize(game->window, WINDOW_WIDTH, WINDOW_HEIGHT);
+        
+        // Update UI positions based on original resolution
+        repositionUI(&game->game_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
+        repositionUI(&game->menu_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
+        
+        // Update OpenGL viewport
+        glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+        
+        // Update projection matrix for the original aspect ratio
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        float aspect = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
+        float fov = CAMERA_FOV;
+        float near = CAMERA_NEAR;
+        float far = CAMERA_FAR;
+        float fH = tan(fov * 3.14159f / 360.0f) * near;
+        float fW = fH * aspect;
+        glFrustum(-fW, fW, -fH, fH, near, far);
+        glMatrixMode(GL_MODELVIEW);
+        
+        logInfo("Switched to windowed mode: %dx%d", WINDOW_WIDTH, WINDOW_HEIGHT);
+    }
+    
+    // Save settings after change
+    saveSettings(&game->settings);
 }

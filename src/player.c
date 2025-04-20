@@ -115,13 +115,13 @@ void initPlayer(Player *player) {
     player->yaw = 0.0f;
     player->pitch = 0.0f;
     
-    // Physics properties
-    player->height = 1.8f;
-    player->eye_height = 1.7f; // Eyes are slightly below the top of player
+    // Physics properties - use values from config.h
+    player->height = 2.0f;
+    player->eye_height = PLAYER_EYE_HEIGHT;
     player->ground_level = 0.0f; // Will be updated based on terrain
-    player->movement_speed = 5.0f; // Units per second
-    player->jump_velocity = 5.0f;
-    player->gravity = 9.8f;
+    player->movement_speed = PLAYER_MOVEMENT_SPEED;
+    player->jump_velocity = PLAYER_JUMP_VELOCITY;
+    player->gravity = PLAYER_GRAVITY;
     
     // State flags
     player->is_moving = false;
@@ -158,9 +158,11 @@ void updatePlayer(Player *player, float delta_time) {
     player->velocity_x *= 0.9f;
     player->velocity_z *= 0.9f;
     
-    // Clamp pitch to avoid looking too far up or down
-    if (player->pitch > 89.0f) player->pitch = 89.0f;
-    if (player->pitch < -89.0f) player->pitch = -89.0f;
+    // Clamp pitch to respect PLAYER_MAXIMUM_VERTICAL_ROT from config.h
+    // Convert from 0-160 range to +/- degrees
+    float half_angle = PLAYER_MAXIMUM_VERTICAL_ROT / 2.0f;
+    if (player->pitch > half_angle) player->pitch = half_angle;
+    if (player->pitch < -half_angle) player->pitch = -half_angle;
     
     // Update weapon animation
     updateWeaponAnimation(player, delta_time);

@@ -123,11 +123,8 @@
 #define MENU_CAMERA_ROTATION_SPEED 0.005f
 
 // Player settings
-#define PLAYER_POSITION_X 0.0f
-#define PLAYER_POSITION_Y 0.0f
-#define PLAYER_POSITION_Z 0.0f
+#define PLAYER_MAXIMUM_VERTICAL_ROT 160.0f // Max vertical rotation in degrees
 #define PLAYER_EYE_HEIGHT 1.7f
-#define PLAYER_HEIGHT 1.8f
 #define PLAYER_MOVEMENT_SPEED 5.0f
 #define PLAYER_JUMP_VELOCITY 5.0f
 #define PLAYER_GRAVITY 9.8f
@@ -146,14 +143,14 @@
 #define TERRAIN_POSITION_Y 0.0f
 #define TERRAIN_POSITION_Z 0.0f
 #define TERRAIN_TILE_SIZE 50.0f
-#define TERRAIN_HEIGHT_SCALE 5.0f
+#define TERRAIN_HEIGHT_SCALE 0.2f
 
 
 // Billboard vegetation settings
 #define TERRAIN_MAX_FEATURES 5000
-#define VEGETATION_DENSITY_SMALL 0.8f  // Multiplier for small vegetation
+#define VEGETATION_DENSITY_SMALL 1.0f  // Multiplier for small vegetation
 #define VEGETATION_DENSITY_MEDIUM 0.25f  // Multiplier for medium vegetation
-#define VEGETATION_DENSITY_BIG 0.1f  // Multiplier for big vegetation
+#define VEGETATION_DENSITY_BIG 0.05f  // Multiplier for big vegetation
 
 // Font settings
 #define GAME_FONT_FILE "fonts/NovaSquare-Regular.ttf"

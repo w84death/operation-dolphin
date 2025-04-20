@@ -78,72 +78,8 @@ void processInput(InputState* input, GameState* game, Player* player, float delt
 void handleKeyDown(InputState* input, SDL_Keycode key, GameState* game) {
     // Handle F11 for fullscreen toggle in all application states
     if (key == SDLK_F11) {
-        // Toggle fullscreen
-        game->fullscreen = !game->fullscreen;
-        
-        if (game->fullscreen) {
-            // Store the current window size before going fullscreen
-            SDL_GetWindowSize(game->window, &game->window_width, &game->window_height);
-            
-            // For fullscreen, use SDL_WINDOW_FULLSCREEN_DESKTOP for better compatibility
-            if (SDL_SetWindowFullscreen(game->window, SDL_WINDOW_FULLSCREEN_DESKTOP) != 0) {
-                logError("Error switching to fullscreen: %s", SDL_GetError());
-            }
-            
-            // Get the new resolution after switching to fullscreen
-            int new_width, new_height;
-            SDL_GetWindowSize(game->window, &new_width, &new_height);
-            
-            // Update UI positions based on new resolution
-            repositionUI(&game->game_ui, new_width, new_height);
-            repositionUI(&game->menu_ui, new_width, new_height);
-            
-            // Update OpenGL viewport
-            glViewport(0, 0, new_width, new_height);
-            
-            // Update projection matrix for the new aspect ratio
-            glMatrixMode(GL_PROJECTION);
-            glLoadIdentity();
-            float aspect = (float)new_width / (float)new_height;
-            float fov = CAMERA_FOV;
-            float near = CAMERA_NEAR;
-            float far = CAMERA_FAR;
-            float fH = tan(fov * 3.14159f / 360.0f) * near;
-            float fW = fH * aspect;
-            glFrustum(-fW, fW, -fH, fH, near, far);
-            glMatrixMode(GL_MODELVIEW);
-            
-            logInfo("Switched to fullscreen: %dx%d", new_width, new_height);
-        } else {
-            // Return to windowed mode with original dimensions
-            if (SDL_SetWindowFullscreen(game->window, 0) != 0) {
-                logError("Error switching to windowed mode: %s", SDL_GetError());
-            }
-            
-            // Restore original window size
-            SDL_SetWindowSize(game->window, WINDOW_WIDTH, WINDOW_HEIGHT);
-            
-            // Update UI positions based on original resolution
-            repositionUI(&game->game_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
-            repositionUI(&game->menu_ui, WINDOW_WIDTH, WINDOW_HEIGHT);
-            
-            // Update OpenGL viewport
-            glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-            
-            // Update projection matrix for the original aspect ratio
-            glMatrixMode(GL_PROJECTION);
-            glLoadIdentity();
-            float aspect = (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT;
-            float fov = CAMERA_FOV;
-            float near = CAMERA_NEAR;
-            float far = CAMERA_FAR;
-            float fH = tan(fov * 3.14159f / 360.0f) * near;
-            float fW = fH * aspect;
-            glFrustum(-fW, fW, -fH, fH, near, far);
-            glMatrixMode(GL_MODELVIEW);
-            
-            logInfo("Switched to windowed mode: %dx%d", WINDOW_WIDTH, WINDOW_HEIGHT);
-        }
+        // Toggle fullscreen using our unified function
+        toggleFullscreen(game, !game->fullscreen);
         return; // Handle F11 and return immediately
     }
     
