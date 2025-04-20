@@ -7,7 +7,7 @@ FUTURE PLANS:
     - [todo] end game
 
 alpha5:
-    - TBD 
+    - TBD
 
 alpha4:
     - items on the map (boxes to open)
