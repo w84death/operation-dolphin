@@ -3,14 +3,11 @@
 
 #include <stdbool.h>
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_mixer.h>
 #include "player.h"
-#include "terrain.h"
-#include "config.h"
 #include "ui.h"
-
-// Forward declaration for terrain type
-typedef struct Terrain Terrain;
+#include "config.h"
+#include "audio.h"
+#include "vegetation.h"
 
 // Menu states
 typedef enum {
@@ -27,32 +24,6 @@ typedef struct {
     bool invert_y_axis;  // Y-axis inversion setting
     bool fullscreen;     // Fullscreen toggle setting
 } GameSettings;
-
-// Audio structure for managing game audio
-typedef struct {
-    Mix_Music **music_tracks;        // Array of music tracks
-    Mix_Music *menu_music;           // Special music track for menu screens
-    char **music_filenames;          // Array of music filenames
-    int num_tracks;                  // Total number of music tracks
-    int current_track;               // Current playing track index
-    int *gameplay_playlist;          // Array of indices for gameplay music
-    int num_gameplay_tracks;         // Number of tracks in gameplay playlist
-    int current_gameplay_track;      // Current gameplay track index
-    bool music_playing;              // Whether music is currently playing
-    bool initialized;                // Whether audio system is initialized
-    bool in_menu_music;              // Whether currently playing menu music
-    float track_switch_timer;        // Timer for track switching
-} AudioSystem;
-
-// Type definition for vegetation
-typedef struct {
-    float x, y, z;       // Position
-    float width, height; // Dimensions
-    int texture_index;   // Which texture to use
-    int type;            // 0=small, 1=medium, 2=big
-    bool active;         // Whether this vegetation is visible
-    int chunk_x, chunk_z; // Which chunk this vegetation belongs to
-} Vegetation;
 
 // Game state structure
 typedef struct {
@@ -72,7 +43,7 @@ typedef struct {
     
     // Player, camera and world
     Player player;
-    Terrain* terrain;
+    void* terrain; // Opaque pointer to terrain data
     
     // SDL/OpenGL resources
     SDL_Window* window;
@@ -119,13 +90,7 @@ void initMenu(GameState* game);
 void updateMenuUI(GameState* game);
 void handleMenuInput(GameState* game, SDL_Keycode key);
 void resetGame(GameState* game);
+void updateCompassUI(GameState* game); // Added missing declaration
 void cutMediumFoliage(Player* player); // New function to handle cutting medium foliage
-
-// Vegetation related functions
-void createVegetation(int count, float terrain_size);
-void createVegetationForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed);
-void renderVegetation(void);
-bool loadVegetationTextures(void);
-void cleanupVegetation(void);
 
 #endif // GAME_H
