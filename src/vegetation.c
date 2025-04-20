@@ -131,8 +131,21 @@ void createVegetation(int count, float terrain_size) {
     // Free previous vegetation if any
     cleanupVegetation();
     
-    // Just create vegetation for a single chunk (0,0) using the global seed
-    createVegetationForChunk(0, 0, terrain_size, getGlobalTerrainSeed());
+    // Get the game state to access the foliage seed
+    GameState* game = (GameState*)game_state_ptr;
+    unsigned int seed = FOLIAGE_DEFAULT_SEED; // Default seed as fallback
+    
+    // Use the seed from game settings if available
+    if (game != NULL) {
+        seed = game->settings.foliage_seed;
+        logInfo("Using foliage seed from settings: %u", seed);
+    }
+    
+    // Set the global terrain seed to match our foliage seed
+    setGlobalTerrainSeed(seed);
+    
+    // Create vegetation for a single chunk (0,0) using the configured seed
+    createVegetationForChunk(0, 0, terrain_size, seed);
 }
 
 // Clean up vegetation resources

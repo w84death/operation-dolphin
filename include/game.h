@@ -26,6 +26,7 @@ typedef struct {
     bool high_terrain_features;
     bool invert_y_axis;  // Y-axis inversion setting
     bool fullscreen;     // Fullscreen toggle setting
+    unsigned int foliage_seed; // Seed for foliage generation
 } GameSettings;
 
 // Game state structure

@@ -98,6 +98,7 @@ bool initGame(GameState* game) {
     game->settings.high_terrain_features = true;
     game->settings.invert_y_axis = MOUSE_INVERT_Y_DEFAULT;
     game->settings.fullscreen = true; // Default to fullscreen
+    game->settings.foliage_seed = FOLIAGE_DEFAULT_SEED; // Initialize with default seed
     
     // Try to load settings from file
     if (loadSettings(&game->settings)) {
@@ -315,6 +316,22 @@ void resetGame(GameState* game) {
     game->player.velocity_z = 0.0f;
     game->player.yaw = 0.0f;
     game->player.pitch = 0.0f;
+    
+    // Generate a new foliage seed for new game
+    unsigned int current_time = (unsigned int)time(NULL);
+    game->settings.foliage_seed = current_time; // Use current time as seed
+    logInfo("New game started with foliage seed: %u", game->settings.foliage_seed);
+    
+    // Regenerate vegetation with new seed
+    int vegetation_count = game->settings.high_terrain_features ? 
+                          TERRAIN_MAX_FEATURES : TERRAIN_MAX_FEATURES / 2;
+    
+    // Set the global terrain seed to match our foliage seed
+    setGlobalTerrainSeed(game->settings.foliage_seed);
+    
+    // Regenerate vegetation
+    cleanupVegetation();
+    createVegetation(vegetation_count, TERRAIN_TILE_SIZE);
     
     // Reset game state flags
     game->game_started = true;
