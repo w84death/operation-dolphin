@@ -4,7 +4,7 @@ Operation Dolphin: Echoes of the Mesozoic blends the chaos of the Vietnam War wi
 
 ![Gameplay Screenshot](media/gameplay.png)
 
-[Code](https://github.com/w84death/operation-dolphin) | [Homepage](https://smol.p1x.in/operation-dolphin)
+[Code](https://github.com/w84death/operation-dolphin) | [Itch.io](https://w84death.itch.io/operation-dolphin) | [Homepage](https://smol.p1x.in/operation-dolphin)
 
 ```
 git clone git@github.com:w84death/operation-dolphin.git
