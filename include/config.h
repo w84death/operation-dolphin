@@ -174,6 +174,11 @@
 #define UI_ACCENT_COLOR_B 50
 #define UI_ACCENT_COLOR_A 255
 
+#define UI_DIM_COLOR_R 5
+#define UI_DIM_COLOR_G 5
+#define UI_DIM_COLOR_B 5
+#define UI_DIM_COLOR_A 96
+
 // Menu position settings
 #define MENU_TITLE_Y_POS (WINDOW_HEIGHT / 4)
 #define MENU_FIRST_ITEM_Y_POS (WINDOW_HEIGHT / 2 - 30)

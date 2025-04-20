@@ -74,6 +74,7 @@ typedef struct {
     
     // Menu UI elements
     int menu_title_id;
+    int menu_version_id;  // New field for engine version text
     int menu_items[6];
     int settings_items[4]; // Increased from 3 to 4 to accommodate fullscreen setting
     int settings_values[4]; // Increased from 3 to 4 to accommodate fullscreen setting

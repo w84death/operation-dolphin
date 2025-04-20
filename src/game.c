@@ -369,12 +369,18 @@ void initMenu(GameState* game) {
     }
     
     // Define menu colors
-    SDL_Color primary_color = {255, 255, 255, 255};
+    SDL_Color primary_color = {UI_PRIMARY_COLOR_R, UI_PRIMARY_COLOR_G, UI_PRIMARY_COLOR_B, UI_PRIMARY_COLOR_A};
+    SDL_Color version_color = {UI_DIM_COLOR_R, UI_DIM_COLOR_G, UI_DIM_COLOR_B, UI_DIM_COLOR_A};
     
     // Create main menu title
     game->menu_title_id = createTextElement(&game->menu_ui, GAME_MENU_TITLE, 
                                            WINDOW_WIDTH / 2, WINDOW_HEIGHT / 4, 
                                            primary_color, TEXT_ALIGN_CENTER);
+    
+    // Create version text element below the title
+    game->menu_version_id = createTextElement(&game->menu_ui, GAME_ENGINE_VERSION,
+                                            WINDOW_WIDTH / 2, WINDOW_HEIGHT / 4 + 30,
+                                            version_color, TEXT_ALIGN_CENTER);
     
     // Create main menu items - initially all primary_color, will update colors based on selection
     game->menu_items[0] = createTextElement(&game->menu_ui, GAME_MENU_RESUME, 
@@ -450,6 +456,7 @@ void updateMenuUI(GameState* game) {
     if (game->menu_state == MENU_MAIN) {
         // Show title and main menu items
         setElementVisibility(&game->menu_ui, game->menu_title_id, true);
+        setElementVisibility(&game->menu_ui, game->menu_version_id, true); // Show version text
         
         // Show or hide "RESUME GAME" based on whether there's a game to resume
         setElementVisibility(&game->menu_ui, game->menu_items[0], game->game_started);
@@ -476,8 +483,9 @@ void updateMenuUI(GameState* game) {
         }
     }
     else if (game->menu_state == MENU_SETTINGS) {
-        // Show title
+        // Show title and version
         setElementVisibility(&game->menu_ui, game->menu_title_id, true);
+        setElementVisibility(&game->menu_ui, game->menu_version_id, true); // Show version text in settings too
         
         // Hide main menu
         for (int i = 0; i < game->menu_item_count; i++) {
@@ -512,6 +520,7 @@ void updateMenuUI(GameState* game) {
     else if (game->menu_state == MENU_NONE) {
         // Game is running, hide all menu elements
         setElementVisibility(&game->menu_ui, game->menu_title_id, false);
+        setElementVisibility(&game->menu_ui, game->menu_version_id, false); // Hide version text
         
         for (int i = 0; i < game->menu_item_count; i++) {
             setElementVisibility(&game->menu_ui, game->menu_items[i], false);
