@@ -32,9 +32,7 @@ SDL_LIBS = \
 RELEASE_ASSETS = \
 	fonts \
 	textures \
-	media \
 	music \
-	models \
 	LICENSE \
 	README.md
 
