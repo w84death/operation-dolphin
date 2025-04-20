@@ -143,7 +143,7 @@
 #define TERRAIN_POSITION_Y 0.0f
 #define TERRAIN_POSITION_Z 0.0f
 #define TERRAIN_TILE_SIZE 50.0f
-#define TERRAIN_HEIGHT_SCALE 0.2f
+#define TERRAIN_HEIGHT_SCALE 2.0f
 
 // Billboard vegetation settings
 #define TERRAIN_MAX_FEATURES 5000
