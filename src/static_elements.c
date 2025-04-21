@@ -7,6 +7,7 @@
 #include "../include/terrain.h"
 #include "../include/log.h"
 #include "../include/game.h"
+#include "../include/items.h"  // Add include for items functions
 #include "../stb_image.h"
 
 // Global pointer to current game state
@@ -400,4 +401,96 @@ void cleanupStaticElements(void) {
     }
     static_element_count = 0;
     static_element_capacity = 0;
+}
+
+// Spawn items around static elements based on their definitions
+void spawnItemsAroundStaticElements(void) {
+    // Get access to the terrain for height checks
+    GameState* game = (GameState*)game_state_ptr;
+    Terrain* terrain = game ? (Terrain*)game->terrain : NULL;
+    
+    if (terrain == NULL) {
+        log_error("Cannot spawn items around static elements: terrain is NULL");
+        return;
+    }
+    
+    log_info("Spawning items around static elements...");
+    
+    // Use the same seed as the game for consistent spawning
+    unsigned int seed = game->settings.foliage_seed;
+    srand(seed);
+    
+    int total_items_spawned = 0;
+    
+    // Process each active static element
+    for (int i = 0; i < static_element_count; i++) {
+        if (!static_elements[i].active || static_elements[i].items_spawned) {
+            continue; // Skip inactive elements or those that already have items
+        }
+        
+        int type_index = static_elements[i].type_index;
+        if (type_index < 0 || type_index >= STATIC_ELEMENT_TYPE_COUNT) {
+            continue; // Skip invalid type indices
+        }
+        
+        const StaticElementType* element_type = &STATIC_ELEMENT_TYPES[type_index];
+        int element_items_spawned = 0;
+        
+        // Process each item type that can spawn around this element
+        for (int j = 0; j < element_type->num_spawnable_items && j < MAX_SPAWNABLE_ITEMS; j++) {
+            const SpawnableItem* spawnable_item = &element_type->spawnable_items[j];
+            
+            // Check if the item definition index is valid
+            if (spawnable_item->item_definition_index >= ITEM_DEFINITIONS_COUNT) {
+                log_warning("Invalid item definition index %d for static element type %s",
+                           spawnable_item->item_definition_index, element_type->name);
+                continue;
+            }
+            
+            // Determine how many of this item to spawn
+            int count_to_spawn;
+            if (spawnable_item->min_count == spawnable_item->max_count) {
+                count_to_spawn = spawnable_item->min_count;
+            } else {
+                count_to_spawn = spawnable_item->min_count + 
+                                (rand() % (spawnable_item->max_count - spawnable_item->min_count + 1));
+            }
+            
+            // Spawn the specified number of items
+            for (int k = 0; k < count_to_spawn; k++) {
+                // Generate a random angle and distance for item placement
+                float angle = ((float)rand() / RAND_MAX) * 2.0f * M_PI;  // 0 to 2π
+                float distance_range = spawnable_item->max_distance - spawnable_item->min_distance;
+                float distance = spawnable_item->min_distance + ((float)rand() / RAND_MAX) * distance_range;
+                
+                // Calculate position relative to the static element
+                float offset_x = cosf(angle) * distance;
+                float offset_z = sinf(angle) * distance;
+                
+                float item_x = static_elements[i].x + offset_x;
+                float item_z = static_elements[i].z + offset_z;
+                
+                // Get the height at this position from the terrain
+                float item_y = getHeightAtPoint(terrain, item_x, item_z);
+                
+                // Add a small offset to ensure the item sits on top of the terrain
+                float item_height = ITEM_DEFINITIONS[spawnable_item->item_definition_index].height;
+                item_y += item_height * 0.5f;
+                
+                // Create the item at this position
+                createSpecificItem(spawnable_item->item_definition_index, item_x, item_y, item_z);
+                element_items_spawned++;
+                total_items_spawned++;
+            }
+        }
+        
+        // Mark this static element as having its items spawned
+        static_elements[i].items_spawned = true;
+        
+        log_info("Spawned %d items around %s at [%.2f, %.2f, %.2f]",
+               element_items_spawned, element_type->name,
+               static_elements[i].x, static_elements[i].y, static_elements[i].z);
+    }
+    
+    log_success("Spawned a total of %d items around static elements", total_items_spawned);
 }

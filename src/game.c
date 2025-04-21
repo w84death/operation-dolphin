@@ -401,6 +401,9 @@ void resetGame(GameState* game) {
     // Create static elements on the terrain (using the same seed as vegetation)
     createStaticElements(15, TERRAIN_TILE_SIZE); // Create 15 static elements
     
+    // Spawn items around static elements to create points of interest
+    spawnItemsAroundStaticElements();
+    
     // Reset game state flags
     game->game_started = true;
     game->game_paused = false;

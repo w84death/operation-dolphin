@@ -73,7 +73,11 @@ bool loadVegetationTextures() {
         "textures/foliage/medium/weed2.tga",
         "textures/foliage/medium/weed3.tga",
         "textures/foliage/medium/fern1.tga",
-        "textures/foliage/medium/fern2.tga"
+        "textures/foliage/medium/fern2.tga",
+        "textures/foliage/medium/bamboo1.tga",
+        "textures/foliage/medium/bamboo2.tga",
+        "textures/foliage/medium/bamboo3.tga",
+        "textures/foliage/medium/bamboo4.tga"
     };
     
     // Big vegetation textures (trees, palms, big rocks)
