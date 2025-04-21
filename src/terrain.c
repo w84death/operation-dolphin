@@ -7,6 +7,9 @@
 #include "../include/terrain.h"
 #include "../include/config.h"
 #include "../include/log.h"
+
+// Include stb_image.h after all other includes
+#define STBI_ONLY_TGA
 #include "../stb_image.h"
 
 // Global seed for terrain and vegetation generation

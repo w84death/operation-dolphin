@@ -47,6 +47,7 @@ void cleanupUI(UISystem* ui);
 
 // Element creation/management
 int createTextElement(UISystem* ui, const char* text, int x, int y, SDL_Color color, TextAlignment alignment);
+int createImageElement(UISystem* ui, const char* image_path, int x, int y, int width, int height, TextAlignment alignment);
 void updateTextElement(UISystem* ui, int element_id, const char* text);
 void setElementVisibility(UISystem* ui, int element_id, bool visible);
 void setElementPosition(UISystem* ui, int element_id, int x, int y);

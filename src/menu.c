@@ -66,9 +66,9 @@ bool initMenuSystem(MenuSystem *menu, UISystem *ui, AudioSystem *audio, SDL_Wind
     SDL_Color primary_color = {UI_PRIMARY_COLOR_R, UI_PRIMARY_COLOR_G, UI_PRIMARY_COLOR_B, UI_PRIMARY_COLOR_A};
     
     // Create main menu title
-    menu->title_id = createTextElement(ui, GAME_MENU_TITLE, 
+    menu->title_id = createImageElement(ui, "textures/ui/logo.tga", 
                                       MENU_TITLE_X_POS, MENU_TITLE_Y_POS, 
-                                      primary_color, TEXT_ALIGN_CENTER);
+                                      0, 0, TEXT_ALIGN_CENTER);
     
     // Create main menu items - initially all primary_color, will update colors based on selection
     menu->main_menu_items[0] = createTextElement(ui, GAME_MENU_RESUME, 

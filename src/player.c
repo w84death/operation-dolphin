@@ -7,7 +7,10 @@
 #include "../include/terrain.h" // Add terrain header for height checks
 #include "../include/config.h"
 #include "../include/log.h"
-#include "../stb_image.h" // Include stb_image for texture loading
+
+// Include stb_image.h after all other includes
+#define STBI_ONLY_TGA
+#include "../stb_image.h"
 
 // Load weapon texture from file
 void loadWeaponTexture(Player *player, const char* texture_path) {

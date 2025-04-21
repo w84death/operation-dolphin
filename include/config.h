@@ -165,9 +165,9 @@
 #define GAME_UI_FONT_SIZE 20  // Smaller size for game UI elements
 
 // UI Color settings
-#define UI_PRIMARY_COLOR_R 25
-#define UI_PRIMARY_COLOR_G 25
-#define UI_PRIMARY_COLOR_B 25
+#define UI_PRIMARY_COLOR_R 250
+#define UI_PRIMARY_COLOR_G 250
+#define UI_PRIMARY_COLOR_B 255
 #define UI_PRIMARY_COLOR_A 255
 
 #define UI_SECONDARY_COLOR_R 50

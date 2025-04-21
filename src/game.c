@@ -436,9 +436,9 @@ void initMenu(GameState* game) {
     SDL_Color version_color = {UI_DIM_COLOR_R, UI_DIM_COLOR_G, UI_DIM_COLOR_B, UI_DIM_COLOR_A};
     
     // Create main menu title
-    game->menu_title_id = createTextElement(&game->menu_ui, GAME_MENU_TITLE, 
+    game->menu_title_id = createImageElement(&game->menu_ui, "textures/ui/logo.tga", 
                                            WINDOW_WIDTH / 2, WINDOW_HEIGHT / 4, 
-                                           primary_color, TEXT_ALIGN_CENTER);
+                                           0, 0, TEXT_ALIGN_CENTER);
     
     // Create version text element below the title using the smaller font system
     game->menu_version_id = createTextElement(&game->version_ui, GAME_ENGINE_VERSION,

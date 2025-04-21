@@ -8,6 +8,9 @@
 #include "../include/log.h"
 #include "../include/game.h"
 #include "../include/items.h"  // Add include for items functions
+
+// Include stb_image.h after all other includes
+#define STBI_ONLY_TGA
 #include "../stb_image.h"
 
 // Global pointer to current game state

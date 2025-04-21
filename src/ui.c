@@ -4,6 +4,10 @@
 #include "../include/ui.h"
 #include "../include/log.h"
 
+// Include stb_image.h after all other includes
+#define STBI_ONLY_TGA
+#include "../stb_image.h"
+
 // Initialize UI system
 bool initUI(UISystem* ui, const char* font_path, int font_size, int screen_width, int screen_height) {
     // Initialize SDL_ttf if not already initialized
@@ -160,6 +164,69 @@ int createTextElement(UISystem* ui, const char* text, int x, int y, SDL_Color co
     
     log_success("Created text element '%s' with ID %d, size: %dx%d", 
            text, id, ui->elements[id].width, ui->elements[id].height);
+    
+    return id;
+}
+
+// Create an image element and return its ID
+int createImageElement(UISystem* ui, const char* image_path, int x, int y, int width, int height, TextAlignment alignment) {
+    // Check if we need to expand the elements array
+    if (ui->element_count >= ui->max_elements) {
+        int new_max = ui->max_elements * 2;
+        UIElement* new_elements = (UIElement*)realloc(ui->elements, new_max * sizeof(UIElement));
+        if (new_elements == NULL) {
+            log_error("Failed to reallocate memory for UI elements");
+            return -1;
+        }
+        ui->elements = new_elements;
+        ui->max_elements = new_max;
+    }
+    
+    // Initialize the new element
+    int id = ui->element_count;
+    ui->elements[id].type = UI_IMAGE;
+    ui->elements[id].x = x;
+    ui->elements[id].y = y;
+    ui->elements[id].visible = true;
+    ui->elements[id].alignment = alignment;
+    ui->elements[id].texture_id = 0;
+    ui->elements[id].text = NULL; // No text for image elements
+    
+    // Load the image
+    int img_width, img_height, channels;
+    unsigned char* image = stbi_load(image_path, &img_width, &img_height, &channels, STBI_rgb_alpha);
+    
+    if (!image) {
+        log_error("Unable to load image: %s - %s", image_path, stbi_failure_reason());
+        return -1;
+    }
+    
+    // Create OpenGL texture
+    GLuint texture_id;
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+    
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    // Upload texture data
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0,
+                GL_RGBA, GL_UNSIGNED_BYTE, image);
+                
+    // Free the image data
+    stbi_image_free(image);
+    
+    // If width/height were specified as 0, use image dimensions
+    ui->elements[id].width = (width > 0) ? width : img_width;
+    ui->elements[id].height = (height > 0) ? height : img_height;
+    ui->elements[id].texture_id = texture_id;
+    
+    // Increment element count
+    ui->element_count++;
+    
+    log_success("Created image element from '%s' with ID %d, size: %dx%d", 
+           image_path, id, ui->elements[id].width, ui->elements[id].height);
     
     return id;
 }
