@@ -7,6 +7,9 @@ FUTURE PLANS:
     - [todo] animals hunt player, bite
     - [todo] end game
 
+alpha6:
+    - game logo image
+
 alpha5:
     - animals: 8-sided 2D textures
     - animals wander on the level
