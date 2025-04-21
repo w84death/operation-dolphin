@@ -880,6 +880,9 @@ void updateGame(GameState* game, float delta_time) {
             cutMediumFoliage(&game->player);
         }
         
+        // Update animal positions and states
+        updateAnimals(delta_time);
+        
         // Update particles
         updateParticles(delta_time);
         

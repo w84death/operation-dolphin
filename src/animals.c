@@ -203,8 +203,22 @@ void createAnimals(int count, float terrain_size) {
             animals[i].z = ((float)rand() / RAND_MAX) * terrain_size - half_size + terrain_offset_z;
         }
         
-        // Give each animal a random rotation
+        // Initialize movement parameters
         animals[i].rotation = ((float)rand() / RAND_MAX) * 360.0f;
+        animals[i].direction = animals[i].rotation; // Initial movement direction matches rotation
+        animals[i].velocity = 0.0f; // Start idle
+        animals[i].state = ANIMAL_IDLE;
+        
+        // Set random state timer for first state transition
+        animals[i].state_timer = ANIMAL_MIN_IDLE_TIME + 
+                                ((float)rand() / RAND_MAX) * (ANIMAL_MAX_IDLE_TIME - ANIMAL_MIN_IDLE_TIME);
+        
+        // Set maximum velocity based on animal type
+        if (animals[i].type == ANIMAL_CHICKEN) {
+            animals[i].max_velocity = ANIMAL_CHICKEN_SPEED;
+        } else if (animals[i].type == ANIMAL_DINO) {
+            animals[i].max_velocity = ANIMAL_DINO_SPEED;
+        }
         
         // Set dimensions based on animal type - INCREASE SIZE FOR EASIER VISIBILITY
         if (animals[i].type == ANIMAL_CHICKEN) {
@@ -431,19 +445,27 @@ void renderAnimals(float camera_x, float camera_z) {
             float dx = camera_x - animals[i].x;
             float dz = camera_z - animals[i].z;
             
-            // Calculate angle in degrees (0-360)
-            float angle = atan2f(dx, dz) * 180.0f / M_PI;
-            if (angle < 0) angle += 360.0f;
+            // Calculate viewing angle in degrees (0-360)
+            float view_angle = atan2f(dx, dz) * 180.0f / M_PI;
+            if (view_angle < 0) view_angle += 360.0f;
+            
+            // Calculate the relative angle between the camera view direction and the animal's movement direction
+            // This determines which of the 8 directional textures to show
+            float relative_angle = view_angle - animals[i].rotation;
+            
+            // Normalize to 0-360 range
+            while (relative_angle < 0) relative_angle += 360.0f;
+            while (relative_angle >= 360.0f) relative_angle -= 360.0f;
             
             // Calculate which of the 8 direction sprites to use (45-degree segments)
-            // REVERSED: Subtract from ANIMAL_DIRECTIONS-1 to reverse the rotation direction
-            int direction_index = (ANIMAL_DIRECTIONS - 1) - ((int)((angle + 22.5f) / 45.0f) % ANIMAL_DIRECTIONS);
+            // Split the 360 degrees into 8 segments of 45 degrees each
+            int direction_index = (int)((relative_angle + 22.5f) / 45.0f) % ANIMAL_DIRECTIONS;
+            
+            // Reverse the direction to match texture ordering
+            direction_index = (ANIMAL_DIRECTIONS - 1) - direction_index;
             
             // Get the texture for this animal type and direction
             GLuint texture = animal_textures[animals[i].type][direction_index];
-            
-            // Always face the camera (the actual billboard effect)
-            float rotation = angle - 180.0f; 
             
             // Draw the animal sprite - using fixed billboard to always face camera
             drawBillboard(
@@ -470,4 +492,112 @@ void cleanupAnimals(void) {
     }
     animal_count = 0;
     animal_capacity = 0;
+}
+
+// Update animal movement and state
+void updateAnimals(float delta_time) {
+    // Need access to terrain for height calculations
+    GameState* game = (GameState*)game_state_ptr;
+    Terrain* terrain = game ? (Terrain*)game->terrain : NULL;
+    
+    for (int i = 0; i < animal_count; i++) {
+        if (!animals[i].active) continue;
+        
+        // Update state timer
+        animals[i].state_timer -= delta_time;
+        
+        // Check if we need to change state
+        if (animals[i].state_timer <= 0.0f) {
+            // Transition to next state
+            if (animals[i].state == ANIMAL_IDLE) {
+                // Transition from idle to walking
+                animals[i].state = ANIMAL_WALKING;
+                
+                // Pick a random direction to walk in
+                animals[i].direction = ((float)rand() / RAND_MAX) * 360.0f;
+                
+                // Set full velocity for movement
+                animals[i].velocity = animals[i].max_velocity;
+                
+                // Set random duration for walking state
+                animals[i].state_timer = ANIMAL_MIN_WALK_TIME + 
+                                       ((float)rand() / RAND_MAX) * 
+                                       (ANIMAL_MAX_WALK_TIME - ANIMAL_MIN_WALK_TIME);
+            } else {
+                // Transition from walking to idle
+                animals[i].state = ANIMAL_IDLE;
+                
+                // Stop moving
+                animals[i].velocity = 0.0f;
+                
+                // Set random duration for idle state
+                animals[i].state_timer = ANIMAL_MIN_IDLE_TIME + 
+                                       ((float)rand() / RAND_MAX) * 
+                                       (ANIMAL_MAX_IDLE_TIME - ANIMAL_MIN_IDLE_TIME);
+            }
+        }
+        
+        // Update position based on current state
+        if (animals[i].state == ANIMAL_WALKING && terrain != NULL) {
+            // Calculate movement vector based on direction
+            float rad_direction = animals[i].direction * M_PI / 180.0f;
+            float dx = sinf(rad_direction) * animals[i].velocity * delta_time;
+            float dz = cosf(rad_direction) * animals[i].velocity * delta_time;
+            
+            // Store original position in case we need to revert
+            float original_x = animals[i].x;
+            float original_z = animals[i].z;
+            float original_y = animals[i].y;
+            
+            // Update position
+            animals[i].x += dx;
+            animals[i].z += dz;
+            
+            // Update Y position based on terrain height
+            float ground_level = getHeightAtPoint(terrain, animals[i].x, animals[i].z);
+            
+            // Add a small offset to keep animal above ground
+            animals[i].y = ground_level + 0.05f;
+            
+            // Set rotation to match movement direction (important: this is the animal's orientation)
+            animals[i].rotation = animals[i].direction;
+            
+            // Check if animal has wandered too far from its spawn point
+            // For simplicity we're using a circular boundary with radius ANIMAL_WANDER_RADIUS
+            float spawn_x = 0.0f;
+            float spawn_z = 0.0f;
+            
+            // Use original spawn position based on index for the first 20 animals
+            if (i < 10) {
+                spawn_x = -10.0f + (i * 2.0f);
+                spawn_z = 0.0f;
+            } else if (i < 20) {
+                spawn_x = -10.0f + ((i-10) * 2.0f);
+                spawn_z = 5.0f;
+            }
+            
+            // Calculate distance from spawn point
+            float dist_x = animals[i].x - spawn_x;
+            float dist_z = animals[i].z - spawn_z;
+            float dist_sq = dist_x * dist_x + dist_z * dist_z;
+            
+            // If outside the wander radius, revert movement and pick a new direction
+            if (dist_sq > ANIMAL_WANDER_RADIUS * ANIMAL_WANDER_RADIUS) {
+                // Revert position
+                animals[i].x = original_x;
+                animals[i].y = original_y;
+                animals[i].z = original_z;
+                
+                // Pick new direction (towards spawn point)
+                float angle_to_center = atan2f(-dist_x, -dist_z) * 180.0f / M_PI;
+                
+                // Add some randomness to the angle (±45 degrees)
+                float random_offset = ((float)rand() / RAND_MAX) * 90.0f - 45.0f;
+                animals[i].direction = angle_to_center + random_offset;
+                
+                // Update rotation to match new direction
+                animals[i].rotation = animals[i].direction;
+            }
+        }
+    }
 }
