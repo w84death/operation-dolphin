@@ -7,8 +7,12 @@ FUTURE PLANS:
     - [todo] end game
 
 alpha5:
-    - animals! 8-sided 2D textures
+    - animals: 8-sided 2D textures
     - animals wander on the level
+    - static elements: 8-sided 2D textures
+    - spawn huts and trucks on the level
+    - items refactor
+    - items to take and to open
 
 alpha4:
     - items on the map (boxes to open)

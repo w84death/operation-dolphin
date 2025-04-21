@@ -11,11 +11,9 @@
 static Item items[MAX_ITEMS];
 static int item_count = 0;
 
-// Texture IDs
-static GLuint box_texture_closed = 0;
-static GLuint box_texture_open = 0;
-static GLuint ammo_texture_closed = 0;
-static GLuint ammo_texture_open = 0;
+// Array to store texture IDs for each item definition
+static GLuint item_textures_closed[ITEM_DEFINITIONS_COUNT] = {0};
+static GLuint item_textures_open[ITEM_DEFINITIONS_COUNT] = {0};
 
 // Forward declaration for utility function
 static GLuint loadItemTexture(const char* texture_path);
@@ -23,28 +21,40 @@ static void drawBillboard(float x, float y, float z, float width, float height, 
 
 // Initialize the items system and load textures
 bool initItems(void) {
-    log_info("Initializing items system...");
+    log_info("Initializing items system with %d item definitions...", ITEM_DEFINITIONS_COUNT);
     
-    // Load textures for items
-    box_texture_closed = loadItemTexture(ITEM_BOX_TEXTURE_CLOSED);
-    box_texture_open = loadItemTexture(ITEM_BOX_TEXTURE_OPEN);
-    ammo_texture_closed = loadItemTexture(ITEM_AMMO_TEXTURE_CLOSED);
-    ammo_texture_open = loadItemTexture(ITEM_AMMO_TEXTURE_OPEN);
-    
-    // Check if texture loading was successful
-    if (box_texture_closed == 0 || box_texture_open == 0 || 
-        ammo_texture_closed == 0 || ammo_texture_open == 0) {
-        log_error("Failed to load item textures");
-        return false;
+    // Load textures for all item definitions
+    for (int i = 0; i < ITEM_DEFINITIONS_COUNT; i++) {
+        // Load closed/default texture
+        item_textures_closed[i] = loadItemTexture(ITEM_DEFINITIONS[i].texture_closed_path);
+        
+        // Load open texture only if it exists
+        if (ITEM_DEFINITIONS[i].texture_open_path != NULL) {
+            item_textures_open[i] = loadItemTexture(ITEM_DEFINITIONS[i].texture_open_path);
+        } else {
+            item_textures_open[i] = 0; // No open texture
+        }
+        
+        // Check if texture loading was successful
+        if (item_textures_closed[i] == 0) {
+            log_error("Failed to load texture for item '%s'", ITEM_DEFINITIONS[i].name);
+            return false;
+        }
+        
+        if (ITEM_DEFINITIONS[i].texture_open_path != NULL && item_textures_open[i] == 0) {
+            log_error("Failed to load open texture for item '%s'", ITEM_DEFINITIONS[i].name);
+            return false;
+        }
     }
     
     // Initialize all items as inactive
     for (int i = 0; i < MAX_ITEMS; i++) {
         items[i].active = false;
         items[i].opened = false;
+        items[i].taken = false;
     }
     
-    log_success("Items system initialized successfully");
+    log_success("Items system initialized successfully with %d item definitions", ITEM_DEFINITIONS_COUNT);
     return true;
 }
 
@@ -59,6 +69,7 @@ void createItems(int count, float terrain_size, Terrain* terrain) {
     for (int i = 0; i < MAX_ITEMS; i++) {
         items[i].active = false;
         items[i].opened = false;
+        items[i].taken = false;
     }
     
     // Limit count to maximum
@@ -76,35 +87,103 @@ void createItems(int count, float terrain_size, Terrain* terrain) {
         // Get the terrain height at this position
         float y = getHeightAtPoint(terrain, x, z);
         
+        // Choose a random item definition with weighting for rarity
+        int def_index;
+        
+        // 80% chance for common items, 20% chance for rare items
+        if (rand() % 100 < 80) {
+            // Find a common item
+            int attempts = 0;
+            do {
+                def_index = rand() % ITEM_DEFINITIONS_COUNT;
+                attempts++;
+            } while (ITEM_DEFINITIONS[def_index].rare && attempts < 10);
+            
+            // If we couldn't find a common item after several attempts, just use any
+            if (attempts >= 10) {
+                def_index = rand() % ITEM_DEFINITIONS_COUNT;
+            }
+        } else {
+            // Find a rare item
+            int attempts = 0;
+            do {
+                def_index = rand() % ITEM_DEFINITIONS_COUNT;
+                attempts++;
+            } while (!ITEM_DEFINITIONS[def_index].rare && attempts < 10);
+            
+            // If we couldn't find a rare item after several attempts, just use any
+            if (attempts >= 10) {
+                def_index = rand() % ITEM_DEFINITIONS_COUNT;
+            }
+        }
+        
         // Add a small offset to ensure items sit on top of the terrain and don't clip through
-        y += ITEM_BOX_HEIGHT * 0.5f;
+        y += ITEM_DEFINITIONS[def_index].height * 0.5f;
         
-        // Randomly pick item type
-        ItemType type = (rand() % 2 == 0) ? ITEM_TYPE_BOX : ITEM_TYPE_AMMO;
-        
-        // Set up item
+        // Set up item instance
         items[i].x = x;
         items[i].y = y;
         items[i].z = z;
-        items[i].width = ITEM_BOX_WIDTH;
-        items[i].height = ITEM_BOX_HEIGHT;
         items[i].active = true;
         items[i].opened = false;
-        items[i].type = type;
+        items[i].taken = false;
+        items[i].definition_index = def_index;
         
-        // Assign textures based on type
-        if (type == ITEM_TYPE_BOX) {
-            items[i].texture_closed = box_texture_closed;
-            items[i].texture_open = box_texture_open;
-        } else {
-            items[i].texture_closed = ammo_texture_closed;
-            items[i].texture_open = ammo_texture_open;
-        }
+        // Assign textures from the precached array
+        items[i].texture_closed = item_textures_closed[def_index];
+        items[i].texture_open = item_textures_open[def_index];
         
         item_count++;
     }
     
     log_success("Created %d items", item_count);
+}
+
+// Create a specific item at a given position
+void createSpecificItem(int definition_index, float x, float y, float z) {
+    // Check if the definition index is valid
+    if (definition_index < 0 || definition_index >= ITEM_DEFINITIONS_COUNT) {
+        log_error("Invalid item definition index: %d", definition_index);
+        return;
+    }
+    
+    // Check if we have space for more items
+    if (item_count >= MAX_ITEMS) {
+        log_error("Cannot create more items, already at maximum capacity (%d)", MAX_ITEMS);
+        return;
+    }
+    
+    // Find an empty slot
+    int slot = -1;
+    for (int i = 0; i < MAX_ITEMS; i++) {
+        if (!items[i].active) {
+            slot = i;
+            break;
+        }
+    }
+    
+    // If no slot was found, return an error
+    if (slot == -1) {
+        log_error("No free slots found for new item, despite item_count < MAX_ITEMS");
+        return;
+    }
+    
+    // Set up the item
+    items[slot].x = x;
+    items[slot].y = y;
+    items[slot].z = z;
+    items[slot].active = true;
+    items[slot].opened = false;
+    items[slot].taken = false;
+    items[slot].definition_index = definition_index;
+    items[slot].texture_closed = item_textures_closed[definition_index];
+    items[slot].texture_open = item_textures_open[definition_index];
+    
+    // Increment item count
+    item_count++;
+    
+    log_info("Created item '%s' at position [%.2f, %.2f, %.2f]", 
+             ITEM_DEFINITIONS[definition_index].name, x, y, z);
 }
 
 // Render all active items
@@ -131,17 +210,25 @@ void renderItems(void) {
     
     // Render all items
     for (int i = 0; i < MAX_ITEMS; i++) {
-        if (items[i].active) {
+        // Only render active items that haven't been taken
+        if (items[i].active && !items[i].taken) {
+            int def_index = items[i].definition_index;
+            
             // Choose texture based on opened state
-            GLuint texture = items[i].opened ? items[i].texture_open : items[i].texture_closed;
+            GLuint texture;
+            if (ITEM_DEFINITIONS[def_index].interaction == ITEM_INTERACTION_OPEN) {
+                texture = items[i].opened ? items[i].texture_open : items[i].texture_closed;
+            } else {
+                texture = items[i].texture_closed;
+            }
             
             // Draw the item as a billboard
             drawBillboard(
                 items[i].x, 
                 items[i].y, 
                 items[i].z, 
-                items[i].width, 
-                items[i].height, 
+                ITEM_DEFINITIONS[def_index].width, 
+                ITEM_DEFINITIONS[def_index].height, 
                 texture
             );
         }
@@ -161,8 +248,18 @@ void checkItemCollisions(Player* player) {
     if (player == NULL) return;
     
     for (int i = 0; i < MAX_ITEMS; i++) {
-        // Skip inactive or already opened items
-        if (!items[i].active || items[i].opened) continue;
+        // Skip inactive items
+        if (!items[i].active) continue;
+        
+        // Get the item definition
+        int def_index = items[i].definition_index;
+        ItemInteractionType interaction = ITEM_DEFINITIONS[def_index].interaction;
+        
+        // Skip items that have already been interacted with
+        if ((interaction == ITEM_INTERACTION_OPEN && items[i].opened) ||
+            (interaction == ITEM_INTERACTION_TAKE && items[i].taken)) {
+            continue;
+        }
         
         // Calculate distance to player
         float dx = items[i].x - player->position_x;
@@ -171,16 +268,27 @@ void checkItemCollisions(Player* player) {
         
         // Check if within interaction range
         if (distance < ITEM_INTERACTION_RANGE) {
-            // Open the item
-            items[i].opened = true;
-            
-            // Log the interaction
-            const char* type_str = (items[i].type == ITEM_TYPE_BOX) ? "crate box" : "ammo box";
-            log_info("Player opened %s at position [%.2f, %.2f, %.2f]", type_str, 
-                    items[i].x, items[i].y, items[i].z);
+            if (interaction == ITEM_INTERACTION_OPEN) {
+                // Open the item
+                items[i].opened = true;
+                
+                // Log the interaction
+                log_info("Player opened %s at position [%.2f, %.2f, %.2f]", 
+                        ITEM_DEFINITIONS[def_index].name,
+                        items[i].x, items[i].y, items[i].z);
+            } 
+            else if (interaction == ITEM_INTERACTION_TAKE) {
+                // Take the item
+                items[i].taken = true;
+                
+                // Log the interaction
+                log_info("Player picked up %s at position [%.2f, %.2f, %.2f]", 
+                        ITEM_DEFINITIONS[def_index].name,
+                        items[i].x, items[i].y, items[i].z);
+            }
             
             // In future versions, this would give the player the item contents
-            // For now, we're just changing the texture
+            // For now, we're just changing the texture or removing the item
         }
     }
 }
@@ -189,11 +297,18 @@ void checkItemCollisions(Player* player) {
 void cleanupItems(void) {
     log_info("Cleaning up items resources...");
     
-    // Delete textures
-    if (box_texture_closed != 0) glDeleteTextures(1, &box_texture_closed);
-    if (box_texture_open != 0) glDeleteTextures(1, &box_texture_open);
-    if (ammo_texture_closed != 0) glDeleteTextures(1, &ammo_texture_closed);
-    if (ammo_texture_open != 0) glDeleteTextures(1, &ammo_texture_open);
+    // Delete all textures
+    for (int i = 0; i < ITEM_DEFINITIONS_COUNT; i++) {
+        if (item_textures_closed[i] != 0) {
+            glDeleteTextures(1, &item_textures_closed[i]);
+            item_textures_closed[i] = 0;
+        }
+        
+        if (item_textures_open[i] != 0) {
+            glDeleteTextures(1, &item_textures_open[i]);
+            item_textures_open[i] = 0;
+        }
+    }
     
     // Reset all items
     for (int i = 0; i < MAX_ITEMS; i++) {
@@ -203,8 +318,36 @@ void cleanupItems(void) {
     item_count = 0;
 }
 
+// Get the name of an item based on its definition index
+const char* getItemName(int definition_index) {
+    if (definition_index >= 0 && definition_index < ITEM_DEFINITIONS_COUNT) {
+        return ITEM_DEFINITIONS[definition_index].name;
+    }
+    return "Unknown Item";
+}
+
+// Get the interaction type of an item based on its definition index
+ItemInteractionType getItemInteraction(int definition_index) {
+    if (definition_index >= 0 && definition_index < ITEM_DEFINITIONS_COUNT) {
+        return ITEM_DEFINITIONS[definition_index].interaction;
+    }
+    return ITEM_INTERACTION_TAKE; // Default
+}
+
+// Get the category of an item based on its definition index
+ItemCategory getItemCategory(int definition_index) {
+    if (definition_index >= 0 && definition_index < ITEM_DEFINITIONS_COUNT) {
+        return ITEM_DEFINITIONS[definition_index].category;
+    }
+    return ITEM_CATEGORY_CONTAINER; // Default
+}
+
 // Load a texture from file using stb_image
 static GLuint loadItemTexture(const char* texture_path) {
+    if (texture_path == NULL) {
+        return 0;
+    }
+    
     log_info("Loading item texture: %s", texture_path);
     
     // Load image using stb_image
@@ -300,7 +443,6 @@ static void drawBillboard(float x, float y, float z, float width, float height, 
     
     // Restore state
     glDisable(GL_ALPHA_TEST);
-    // glDepthMask(GL_TRUE); // Re-enable depth writing - handled by renderItems restoration
     glDisable(GL_BLEND);
     glDisable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, 0); // Unbind texture

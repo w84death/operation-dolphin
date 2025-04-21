@@ -215,11 +215,12 @@
 // Item settings
 #define MAX_ITEMS 10
 #define ITEM_INTERACTION_RANGE 2.0f
-#define ITEM_BOX_WIDTH 2.0f  // Increased significantly for better visibility
-#define ITEM_BOX_HEIGHT 2.0f // Increased significantly for better visibility
+#define ITEM_BOX_WIDTH 0.5f  // Increased significantly for better visibility
+#define ITEM_BOX_HEIGHT 0.5f // Increased significantly for better visibility
 #define ITEM_BOX_TEXTURE_CLOSED "textures/items/box_closed.tga"
 #define ITEM_BOX_TEXTURE_OPEN "textures/items/box_open.tga"
 #define ITEM_AMMO_TEXTURE_CLOSED "textures/items/ammo_closed.tga"
 #define ITEM_AMMO_TEXTURE_OPEN "textures/items/ammo_open.tga"
+#define ITEM_RADIO_TEXTURE "textures/items/radio.tga"
 
 #endif // CONFIG_H

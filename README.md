@@ -75,3 +75,14 @@ Operation Dolphin is available for free on our [official itch.io page](https://w
 - **Donations**: Consider supporting us through [itch.io donations](https://w84death.itch.io/operation-dolphin/donate) - every contribution helps us continue making unique retro-inspired experiences
 - **Community**: Join our community by leaving comments, sharing feedback, or participating in discussions on our itch.io page
 - **Sharing**: Help spread the word by sharing the game with friends who might enjoy classic first-person shooters
+
+## Tools Used
+- VSCode w/ Copilot
+- Git
+- AI:
+  - Cloude 3.7 Agent
+  - Sora
+  - https://huggingface.co/spaces/not-lain/background-removal
+  - Hunyuan3D-2.0
+  - Blender
+  - Gimp
