@@ -20,6 +20,7 @@
 #include "../include/audio.h"
 #include "../include/vegetation.h"
 #include "../include/items.h"
+#include "../include/animals.h"
 #include <math.h> // Include for fmodf
 
 // For the input system
@@ -77,6 +78,9 @@ bool initGame(GameState* game) {
     
     // Share the game state pointer with vegetation system
     setGameStatePointer(game);
+    
+    // Share the game state pointer with animal system
+    setAnimalGameStatePointer(game);
     
     // Seed the random number generator
     srand((unsigned int)time(NULL));
@@ -229,6 +233,15 @@ bool initGame(GameState* game) {
         logInfo("Items system initialized successfully\n");
     }
     
+    // Initialize animal system with textures
+    if (!loadAnimalTextures()) {
+        logError("Failed to load animal textures\n");
+        // Continue even if animals failed to load
+        logWarning("Continuing without animals");
+    } else {
+        logInfo("Animal textures loaded successfully\n");
+    }
+    
     // Initialize UI system with smaller font size for game UI
     if (!initUI(&game->game_ui, GAME_FONT_FILE, GAME_UI_FONT_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT)) {
         logError("Failed to initialize game UI system\n");
@@ -368,6 +381,9 @@ void resetGame(GameState* game) {
     
     // Create items (boxes and ammo boxes) for the player to find
     createItems(10, TERRAIN_TILE_SIZE, (Terrain*)game->terrain);
+    
+    // Create animals on the terrain (using the same seed as vegetation)
+    createAnimals(50, TERRAIN_TILE_SIZE);
     
     // Reset game state flags
     game->game_started = true;
@@ -932,6 +948,15 @@ void renderGame(GameState* game) {
     // Render items
     renderItems();
     
+    // Render animals with directional sprites
+    if (game->menu_state == MENU_NONE && game->game_started) {
+        // Pass player position for directional rendering
+        renderAnimals(game->player.position_x, game->player.position_z);
+    } else {
+        // For menu view, use static camera position at the origin
+        renderAnimals(0.0f, 0.0f);
+    }
+    
     // Render particles
     renderParticles();
     
@@ -1005,6 +1030,9 @@ void cleanupGame(GameState* game) {
     
     // Clean up items system
     cleanupItems();
+    
+    // Clean up animals system
+    cleanupAnimals();
     
     // Clean up audio system
     cleanupAudio(&game->audio);
