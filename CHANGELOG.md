@@ -1,6 +1,6 @@
 FUTURE PLANS:
     - [todo] player health and inventory
-    - [todo] sound effects
+    - [todo] sound effects for player
     - [todo] ambient sounds
     - [todo] real night and night-vision google
     - [todo] stealth movement
@@ -11,6 +11,7 @@ alpha6:
     - game logo image
     - more dinosaurs
     - ambient sounds
+    - flying animals
 
 alpha5:
     - animals: 8-sided 2D textures

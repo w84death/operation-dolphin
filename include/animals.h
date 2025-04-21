@@ -34,6 +34,11 @@ struct Animal {
     // Movement control
     float state_timer;   // Time remaining in current state
     float max_velocity;  // Maximum movement speed
+    
+    // Flying animal specific fields
+    float flight_height; // Flying animals' target height above the terrain
+    float vertical_velocity; // Vertical movement speed
+    bool ascending;      // Whether the animal is currently ascending
 };
 
 // Constants for animal textures and rendering
@@ -46,6 +51,13 @@ struct Animal {
 #define ANIMAL_MIN_WALK_TIME 2.0f     // Minimum walking time in seconds
 #define ANIMAL_MAX_WALK_TIME 8.0f     // Maximum walking time in seconds
 #define ANIMAL_WANDER_RADIUS 15.0f    // Maximum distance animals can wander from spawn point
+
+// Flying animal constants
+#define FLYING_MIN_HEIGHT 6.0f        // Minimum flying height above terrain
+#define FLYING_MAX_HEIGHT 12.0f       // Maximum flying height above terrain
+#define FLYING_VERTICAL_SPEED 1.5f    // Vertical movement speed
+#define FLYING_MIN_HEIGHT_TIME 5.0f   // Minimum time before changing height
+#define FLYING_MAX_HEIGHT_TIME 12.0f  // Maximum time before changing height
 
 // Animal related functions
 void setAnimalGameStatePointer(void* game_ptr);

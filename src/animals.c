@@ -227,8 +227,33 @@ void createAnimals(int count, float terrain_size) {
         animals[i].width = species->width * scale_variation;
         animals[i].height = species->height * scale_variation;
         
-        // Position on ground level with small offset to avoid z-fighting
-        animals[i].y = ground_level + 0.05f;
+        // Initialize flying animal parameters if applicable
+        if (species->behavior == ANIMAL_FLYING) {
+            // Set random flight height within range
+            animals[i].flight_height = FLYING_MIN_HEIGHT + 
+                                     ((float)rand() / RAND_MAX) * (FLYING_MAX_HEIGHT - FLYING_MIN_HEIGHT);
+            
+            // Set initial vertical velocity (some animals going up, some down)
+            animals[i].vertical_velocity = FLYING_VERTICAL_SPEED;
+            animals[i].ascending = (rand() % 2) == 0;  // 50% chance of ascending
+            
+            // Get terrain height at this position
+            float terrain_height = 0.0f;
+            if (game != NULL && game->terrain != NULL) {
+                terrain_height = getHeightAtPoint((Terrain*)game->terrain, animals[i].x, animals[i].z);
+            }
+            
+            // Position flying animals at their flight height above terrain
+            animals[i].y = terrain_height + animals[i].flight_height;
+        } else {
+            // Position on ground level with small offset to avoid z-fighting
+            animals[i].y = ground_level + 0.05f;
+            
+            // Initialize flying fields with zeros for ground animals
+            animals[i].flight_height = 0.0f;
+            animals[i].vertical_velocity = 0.0f;
+            animals[i].ascending = false;
+        }
         
         // Chunk coordinates (for future use with chunks)
         animals[i].chunk_x = 0;
@@ -421,44 +446,58 @@ void updateAnimals(float delta_time) {
         
         const AnimalSpecies* species = &ANIMAL_SPECIES[animals[i].species_index];
         
-        // Update state timer
-        animals[i].state_timer -= delta_time;
-        
-        // Check if we need to change state
-        if (animals[i].state_timer <= 0.0f) {
-            // Transition to next state
-            if (animals[i].state == ANIMAL_IDLE) {
-                // Transition from idle to walking
-                animals[i].state = ANIMAL_WALKING;
-                
-                // Pick a random direction to walk in (can be adjusted based on behavior)
-                animals[i].direction = ((float)rand() / RAND_MAX) * 360.0f;
-                
-                // Adjust behavior based on animal type (future expansion)
-                // For now just set velocity
-                animals[i].velocity = animals[i].max_velocity;
-                
-                // Set random duration for walking state
-                animals[i].state_timer = ANIMAL_MIN_WALK_TIME + 
-                                       ((float)rand() / RAND_MAX) * 
-                                       (ANIMAL_MAX_WALK_TIME - ANIMAL_MIN_WALK_TIME);
-            } else {
-                // Transition from walking to idle
-                animals[i].state = ANIMAL_IDLE;
-                
-                // Stop moving
-                animals[i].velocity = 0.0f;
-                
-                // Set random duration for idle state
-                animals[i].state_timer = ANIMAL_MIN_IDLE_TIME + 
-                                       ((float)rand() / RAND_MAX) * 
-                                       (ANIMAL_MAX_IDLE_TIME - ANIMAL_MIN_IDLE_TIME);
+        // Special handling for flying animals
+        if (species->behavior == ANIMAL_FLYING) {
+            // Flying animals are always in motion
+            animals[i].state = ANIMAL_WALKING; // Use walking state for flying
+            animals[i].velocity = animals[i].max_velocity;
+            
+            // Calculate ground level at current position
+            float ground_level = 0.0f;
+            if (terrain) {
+                ground_level = getHeightAtPoint(terrain, animals[i].x, animals[i].z);
             }
-        }
-        
-        // Update position based on current state
-        if (animals[i].state == ANIMAL_WALKING && terrain != NULL) {
-            // Calculate movement vector based on direction
+            
+            // Handle vertical movement
+            if (animals[i].state_timer <= 0.0f) {
+                // Time to change vertical direction
+                animals[i].ascending = !animals[i].ascending;
+                animals[i].state_timer = FLYING_MIN_HEIGHT_TIME + 
+                                       ((float)rand() / RAND_MAX) * 
+                                       (FLYING_MAX_HEIGHT_TIME - FLYING_MIN_HEIGHT_TIME);
+                
+                // Randomize flight height within bounds
+                animals[i].flight_height = FLYING_MIN_HEIGHT + 
+                                         ((float)rand() / RAND_MAX) * 
+                                         (FLYING_MAX_HEIGHT - FLYING_MIN_HEIGHT);
+            }
+            
+            // Calculate target height
+            float target_height = ground_level + animals[i].flight_height;
+            
+            // Adjust y position based on ascending/descending
+            if (animals[i].ascending) {
+                // Moving up toward target height
+                if (animals[i].y < target_height) {
+                    animals[i].y += animals[i].vertical_velocity * delta_time;
+                    // Don't exceed target height
+                    if (animals[i].y > target_height) {
+                        animals[i].y = target_height;
+                    }
+                }
+            } else {
+                // Moving down toward minimum height
+                float min_height = ground_level + FLYING_MIN_HEIGHT;
+                if (animals[i].y > min_height) {
+                    animals[i].y -= animals[i].vertical_velocity * delta_time;
+                    // Don't go below minimum flying height
+                    if (animals[i].y < min_height) {
+                        animals[i].y = min_height;
+                    }
+                }
+            }
+            
+            // Calculate movement in XZ plane
             float rad_direction = animals[i].direction * M_PI / 180.0f;
             float dx = sinf(rad_direction) * animals[i].velocity * delta_time;
             float dz = cosf(rad_direction) * animals[i].velocity * delta_time;
@@ -466,23 +505,15 @@ void updateAnimals(float delta_time) {
             // Store original position in case we need to revert
             float original_x = animals[i].x;
             float original_z = animals[i].z;
-            float original_y = animals[i].y;
             
             // Update position
             animals[i].x += dx;
             animals[i].z += dz;
             
-            // Update Y position based on terrain height
-            float ground_level = getHeightAtPoint(terrain, animals[i].x, animals[i].z);
-            
-            // Add a small offset to keep animal above ground
-            animals[i].y = ground_level + 0.05f;
-            
-            // Set rotation to match movement direction (important: this is the animal's orientation)
+            // Set rotation to match movement direction
             animals[i].rotation = animals[i].direction;
             
-            // Check if animal has wandered too far from its spawn point
-            // For simplicity we're using a circular boundary with radius ANIMAL_WANDER_RADIUS
+            // Check if flying animal has wandered too far
             float spawn_x = 0.0f;
             float spawn_z = 0.0f;
             
@@ -501,10 +532,11 @@ void updateAnimals(float delta_time) {
             float dist_sq = dist_x * dist_x + dist_z * dist_z;
             
             // If outside the wander radius, revert movement and pick a new direction
-            if (dist_sq > ANIMAL_WANDER_RADIUS * ANIMAL_WANDER_RADIUS) {
+            // Flying animals get a larger wander radius
+            float flying_wander_radius = ANIMAL_WANDER_RADIUS * 1.5f;
+            if (dist_sq > flying_wander_radius * flying_wander_radius) {
                 // Revert position
                 animals[i].x = original_x;
-                animals[i].y = original_y;
                 animals[i].z = original_z;
                 
                 // Pick new direction (towards spawn point)
@@ -517,6 +549,121 @@ void updateAnimals(float delta_time) {
                 // Update rotation to match new direction
                 animals[i].rotation = animals[i].direction;
             }
+            
+            // Occasionally change direction for more natural movement
+            if (rand() % 100 < 2) { // 2% chance per frame
+                float random_turn = ((float)rand() / RAND_MAX) * 40.0f - 20.0f; // ±20 degrees
+                animals[i].direction += random_turn;
+                // Keep direction in 0-360 range
+                while (animals[i].direction < 0) animals[i].direction += 360.0f;
+                while (animals[i].direction >= 360.0f) animals[i].direction -= 360.0f;
+                
+                // Update rotation to match new direction
+                animals[i].rotation = animals[i].direction;
+            }
+        } 
+        else {
+            // Regular ground animals (existing code)
+            // Update state timer
+            animals[i].state_timer -= delta_time;
+            
+            // Check if we need to change state
+            if (animals[i].state_timer <= 0.0f) {
+                // Transition to next state
+                if (animals[i].state == ANIMAL_IDLE) {
+                    // Transition from idle to walking
+                    animals[i].state = ANIMAL_WALKING;
+                    
+                    // Pick a random direction to walk in (can be adjusted based on behavior)
+                    animals[i].direction = ((float)rand() / RAND_MAX) * 360.0f;
+                    
+                    // Adjust behavior based on animal type (future expansion)
+                    // For now just set velocity
+                    animals[i].velocity = animals[i].max_velocity;
+                    
+                    // Set random duration for walking state
+                    animals[i].state_timer = ANIMAL_MIN_WALK_TIME + 
+                                           ((float)rand() / RAND_MAX) * 
+                                           (ANIMAL_MAX_WALK_TIME - ANIMAL_MIN_WALK_TIME);
+                } else {
+                    // Transition from walking to idle
+                    animals[i].state = ANIMAL_IDLE;
+                    
+                    // Stop moving
+                    animals[i].velocity = 0.0f;
+                    
+                    // Set random duration for idle state
+                    animals[i].state_timer = ANIMAL_MIN_IDLE_TIME + 
+                                           ((float)rand() / RAND_MAX) * 
+                                           (ANIMAL_MAX_IDLE_TIME - ANIMAL_MIN_IDLE_TIME);
+                }
+            }
+            
+            // Update position based on current state
+            if (animals[i].state == ANIMAL_WALKING && terrain != NULL) {
+                // Calculate movement vector based on direction
+                float rad_direction = animals[i].direction * M_PI / 180.0f;
+                float dx = sinf(rad_direction) * animals[i].velocity * delta_time;
+                float dz = cosf(rad_direction) * animals[i].velocity * delta_time;
+                
+                // Store original position in case we need to revert
+                float original_x = animals[i].x;
+                float original_z = animals[i].z;
+                float original_y = animals[i].y;
+                
+                // Update position
+                animals[i].x += dx;
+                animals[i].z += dz;
+                
+                // Update Y position based on terrain height
+                float ground_level = getHeightAtPoint(terrain, animals[i].x, animals[i].z);
+                
+                // Add a small offset to keep animal above ground
+                animals[i].y = ground_level + 0.05f;
+                
+                // Set rotation to match movement direction (important: this is the animal's orientation)
+                animals[i].rotation = animals[i].direction;
+                
+                // Check if animal has wandered too far from its spawn point
+                // For simplicity we're using a circular boundary with radius ANIMAL_WANDER_RADIUS
+                float spawn_x = 0.0f;
+                float spawn_z = 0.0f;
+                
+                // Use original spawn position based on index for the first 20 animals
+                if (i < 10) {
+                    spawn_x = -10.0f + (i * 2.0f);
+                    spawn_z = 0.0f;
+                } else if (i < 20) {
+                    spawn_x = -10.0f + ((i-10) * 2.0f);
+                    spawn_z = 5.0f;
+                }
+                
+                // Calculate distance from spawn point
+                float dist_x = animals[i].x - spawn_x;
+                float dist_z = animals[i].z - spawn_z;
+                float dist_sq = dist_x * dist_x + dist_z * dist_z;
+                
+                // If outside the wander radius, revert movement and pick a new direction
+                if (dist_sq > ANIMAL_WANDER_RADIUS * ANIMAL_WANDER_RADIUS) {
+                    // Revert position
+                    animals[i].x = original_x;
+                    animals[i].y = original_y;
+                    animals[i].z = original_z;
+                    
+                    // Pick new direction (towards spawn point)
+                    float angle_to_center = atan2f(-dist_x, -dist_z) * 180.0f / M_PI;
+                    
+                    // Add some randomness to the angle (±45 degrees)
+                    float random_offset = ((float)rand() / RAND_MAX) * 90.0f - 45.0f;
+                    animals[i].direction = angle_to_center + random_offset;
+                    
+                    // Update rotation to match new direction
+                    animals[i].rotation = animals[i].direction;
+                }
+            }
         }
+        
+        // Update state timer for all animal types
+        animals[i].state_timer -= delta_time;
     }
 }
