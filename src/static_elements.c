@@ -447,13 +447,20 @@ void spawnItemsAroundStaticElements(void) {
                 continue;
             }
             
-            // Determine how many of this item to spawn
+            // Determine how many of this item to spawn, applying the spawn multiplier
+            int min_count = spawnable_item->min_count;
+            int max_count = (int)(spawnable_item->max_count * ITEM_SPAWN_MULTIPLIER);
+            
+            // Ensure we have at least the minimum count
+            if (max_count < min_count) {
+                max_count = min_count;
+            }
+            
             int count_to_spawn;
-            if (spawnable_item->min_count == spawnable_item->max_count) {
-                count_to_spawn = spawnable_item->min_count;
+            if (min_count == max_count) {
+                count_to_spawn = min_count;
             } else {
-                count_to_spawn = spawnable_item->min_count + 
-                                (rand() % (spawnable_item->max_count - spawnable_item->min_count + 1));
+                count_to_spawn = min_count + (rand() % (max_count - min_count + 1));
             }
             
             // Spawn the specified number of items

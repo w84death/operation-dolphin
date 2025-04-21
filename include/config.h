@@ -213,14 +213,8 @@
 #define COMPASS_WEST "W"
 
 // Item settings
-#define MAX_ITEMS 10
-#define ITEM_INTERACTION_RANGE 2.0f
-#define ITEM_BOX_WIDTH 0.5f  // Increased significantly for better visibility
-#define ITEM_BOX_HEIGHT 0.5f // Increased significantly for better visibility
-#define ITEM_BOX_TEXTURE_CLOSED "textures/items/box_closed.tga"
-#define ITEM_BOX_TEXTURE_OPEN "textures/items/box_open.tga"
-#define ITEM_AMMO_TEXTURE_CLOSED "textures/items/ammo_closed.tga"
-#define ITEM_AMMO_TEXTURE_OPEN "textures/items/ammo_open.tga"
-#define ITEM_RADIO_TEXTURE "textures/items/radio.tga"
+#define MAX_ITEMS 100
+#define ITEM_INTERACTION_RANGE 1.0f
+#define ITEM_SPAWN_MULTIPLIER 2.0f
 
 #endif // CONFIG_H

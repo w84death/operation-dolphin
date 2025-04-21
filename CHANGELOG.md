@@ -1,9 +1,10 @@
 FUTURE PLANS:
-    - [todo] items to open on the map
-    - [todo] night-vision google
-    - [todo] enemies engine
-    - [todo] actual enemies with some hunting logic
+    - [todo] player health and inventory
+    - [todo] sound effects
+    - [todo] ambient sounds
+    - [todo] real night and night-vision google
     - [todo] stealth movement
+    - [todo] animals hunt player, bite
     - [todo] end game
 
 alpha5:
@@ -13,6 +14,8 @@ alpha5:
     - spawn huts and trucks on the level
     - items refactor
     - items to take and to open
+    - items spawns around static elements
+    - more foliage and dinosaurs
 
 alpha4:
     - items on the map (boxes to open)
