@@ -23,14 +23,10 @@ typedef struct {
 // List of all animal species in the game
 static const AnimalSpecies ANIMAL_SPECIES[] = {
     // name,       folder_name, width, height, speed, behavior
-    {"Chicken",    "chicken",   0.5f,  0.6f,   0.5f,  ANIMAL_BEHAVIOR_SCARED},
-    {"Dino",       "dino",      1.0f,  1.5f,   1.2f,  ANIMAL_BEHAVIOR_AGGRESSIVE},
-    {"Rabbit",     "rabbit",    0.4f,  0.5f,   1.8f,  ANIMAL_BEHAVIOR_SCARED},
-    {"Bear",       "bear",      1.5f,  2.2f,   1.0f,  ANIMAL_BEHAVIOR_AGGRESSIVE},
-    {"Deer",       "deer",      1.2f,  1.8f,   1.5f,  ANIMAL_BEHAVIOR_SCARED},
-    {"Fox",        "fox",       0.6f,  0.7f,   1.3f,  ANIMAL_BEHAVIOR_PASSIVE},
-    {"Wolf",       "wolf",      0.9f,  1.0f,   1.6f,  ANIMAL_BEHAVIOR_AGGRESSIVE},
-    {"Turtle",     "turtle",    0.5f,  0.3f,   0.3f,  ANIMAL_BEHAVIOR_PASSIVE}
+    {"Chicken",     "chicken",      0.4f,  0.4f,   0.5f,  ANIMAL_BEHAVIOR_SCARED},
+    {"Dino",        "dino",         1.0f,  1.0f,   1.2f,  ANIMAL_BEHAVIOR_SCARED},
+    {"T-Rex",       "trex",         2.2f,  2.2f,   1.8f,  ANIMAL_BEHAVIOR_AGGRESSIVE},
+    {"Velociaptor", "velocicaptor", 2.0f,  2.0f,   5.0f,  ANIMAL_BEHAVIOR_AGGRESSIVE}
 };
 
 // Number of animal species

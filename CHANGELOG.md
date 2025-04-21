@@ -7,7 +7,8 @@ FUTURE PLANS:
     - [todo] end game
 
 alpha5:
-    - TBD
+    - animals! 8-sided 2D textures
+    - animals wander on the level
 
 alpha4:
     - items on the map (boxes to open)

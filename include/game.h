@@ -8,6 +8,7 @@
 #include "config.h"
 #include "audio.h"
 #include "vegetation.h"
+#include "static_elements.h"  // Add the static elements header
 
 // Settings file path
 #define SETTINGS_FILE_PATH "user_settings.cfg"

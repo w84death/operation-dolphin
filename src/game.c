@@ -21,6 +21,7 @@
 #include "../include/vegetation.h"
 #include "../include/items.h"
 #include "../include/animals.h"
+#include "../include/static_elements.h"  // Add static elements include
 #include <math.h> // Include for fmodf
 
 // For the input system
@@ -81,6 +82,9 @@ bool initGame(GameState* game) {
     
     // Share the game state pointer with animal system
     setAnimalGameStatePointer(game);
+    
+    // Share the game state pointer with static elements system
+    setStaticElementGameStatePointer(game);
     
     // Seed the random number generator
     srand((unsigned int)time(NULL));
@@ -242,6 +246,15 @@ bool initGame(GameState* game) {
         logInfo("Animal textures loaded successfully\n");
     }
     
+    // Initialize static elements with textures
+    if (!loadStaticElementTextures()) {
+        logError("Failed to load static element textures\n");
+        // Continue even if static elements failed to load
+        logWarning("Continuing without static elements");
+    } else {
+        logInfo("Static element textures loaded successfully\n");
+    }
+    
     // Initialize UI system with smaller font size for game UI
     if (!initUI(&game->game_ui, GAME_FONT_FILE, GAME_UI_FONT_SIZE, WINDOW_WIDTH, WINDOW_HEIGHT)) {
         logError("Failed to initialize game UI system\n");
@@ -384,6 +397,9 @@ void resetGame(GameState* game) {
     
     // Create animals on the terrain (using the same seed as vegetation)
     createAnimals(50, TERRAIN_TILE_SIZE);
+    
+    // Create static elements on the terrain (using the same seed as vegetation)
+    createStaticElements(15, TERRAIN_TILE_SIZE); // Create 15 static elements
     
     // Reset game state flags
     game->game_started = true;
@@ -951,6 +967,15 @@ void renderGame(GameState* game) {
     // Render items
     renderItems();
     
+    // Render static elements with directional sprites
+    if (game->menu_state == MENU_NONE && game->game_started) {
+        // Pass player position for directional rendering
+        renderStaticElements(game->player.position_x, game->player.position_z);
+    } else {
+        // For menu view, use static camera position at the origin
+        renderStaticElements(0.0f, 0.0f);
+    }
+    
     // Render animals with directional sprites
     if (game->menu_state == MENU_NONE && game->game_started) {
         // Pass player position for directional rendering
@@ -1036,6 +1061,9 @@ void cleanupGame(GameState* game) {
     
     // Clean up animals system
     cleanupAnimals();
+    
+    // Clean up static elements system
+    cleanupStaticElements();
     
     // Clean up audio system
     cleanupAudio(&game->audio);
