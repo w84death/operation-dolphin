@@ -4,16 +4,10 @@
 #include <stdbool.h>
 #include <GL/gl.h>
 #include "config.h"
+#include "animal_types.h"
 
 // Forward declaration of Animal
 typedef struct Animal Animal;
-
-// Enum for animal types
-typedef enum {
-    ANIMAL_CHICKEN,
-    ANIMAL_DINO,
-    ANIMAL_COUNT
-} AnimalType;
 
 // Enum for animal movement states
 typedef enum {
@@ -32,7 +26,7 @@ struct Animal {
     float rotation;      // Rotation in degrees (0-360)
     float velocity;      // Current movement speed
     float direction;     // Movement direction in degrees (0-360)
-    AnimalType type;     // Which animal type (chicken, dino, etc.)
+    int species_index;   // Index into ANIMAL_SPECIES array
     AnimalState state;   // Current movement state (idle, walking)
     bool active;         // Whether this animal is visible
     int chunk_x, chunk_z; // Which chunk this animal belongs to
@@ -43,7 +37,7 @@ struct Animal {
 };
 
 // Constants for animal textures and rendering
-#define MAX_ANIMAL_TYPES 16
+#define MAX_ANIMAL_SPECIES 16
 #define MAX_ANIMAL_COUNT 500
 
 // Animal movement constants
@@ -51,8 +45,6 @@ struct Animal {
 #define ANIMAL_MAX_IDLE_TIME 5.0f     // Maximum idle time in seconds
 #define ANIMAL_MIN_WALK_TIME 2.0f     // Minimum walking time in seconds
 #define ANIMAL_MAX_WALK_TIME 8.0f     // Maximum walking time in seconds
-#define ANIMAL_CHICKEN_SPEED 0.5f     // Chicken movement speed (units per second)
-#define ANIMAL_DINO_SPEED 1.2f        // Dino movement speed (units per second)
 #define ANIMAL_WANDER_RADIUS 15.0f    // Maximum distance animals can wander from spawn point
 
 // Animal related functions

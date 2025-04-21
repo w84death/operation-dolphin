@@ -7,7 +7,7 @@
 #include "../include/terrain.h"
 #include "../include/log.h"
 #include "../include/game.h"
-#include "../stb_image.h" // Add stb_image.h for texture loading
+#include "../stb_image.h"
 
 // Global pointer to current game state
 static void* game_state_ptr = NULL;
@@ -17,10 +17,9 @@ static Animal* animals = NULL;
 static int animal_count = 0;
 static int animal_capacity = 0;
 
-// Textures for animal sprites (for each type and each direction)
-static GLuint animal_textures[MAX_ANIMAL_TYPES][ANIMAL_DIRECTIONS];
-static bool animal_textures_loaded[MAX_ANIMAL_TYPES] = {false};
-static const char* animal_type_names[MAX_ANIMAL_TYPES] = {"chicken", "dino"};
+// Textures for animal sprites (for each species and each direction)
+static GLuint animal_textures[MAX_ANIMAL_SPECIES][ANIMAL_DIRECTIONS];
+static bool animal_textures_loaded[MAX_ANIMAL_SPECIES] = {false};
 
 // Set the game state pointer for settings access
 void setAnimalGameStatePointer(void* game_ptr) {
@@ -29,32 +28,6 @@ void setAnimalGameStatePointer(void* game_ptr) {
 
 // Load textures for all animal types
 bool loadAnimalTextures() {
-    // Define paths for each animal type (each with 8 directional sprites)
-    const char* animal_texture_paths[ANIMAL_COUNT][ANIMAL_DIRECTIONS] = {
-        // Chicken textures (8 directions)
-        {
-            "textures/animals/chicken/1.tga",
-            "textures/animals/chicken/2.tga",
-            "textures/animals/chicken/3.tga",
-            "textures/animals/chicken/4.tga",
-            "textures/animals/chicken/5.tga",
-            "textures/animals/chicken/6.tga",
-            "textures/animals/chicken/7.tga",
-            "textures/animals/chicken/1.tga"  // Reuse first texture for 8th direction to complete the circle
-        },
-        // Dino textures (8 directions)
-        {
-            "textures/animals/dino/1.tga",
-            "textures/animals/dino/2.tga",
-            "textures/animals/dino/3.tga",
-            "textures/animals/dino/4.tga",
-            "textures/animals/dino/5.tga",
-            "textures/animals/dino/6.tga",
-            "textures/animals/dino/7.tga",
-            "textures/animals/dino/1.tga"  // Reuse first texture for 8th direction to complete the circle
-        }
-    };
-
     // Helper function to load a texture
     GLuint loadTexture(const char* filename) {
         // Create an OpenGL texture ID
@@ -89,38 +62,40 @@ bool loadAnimalTextures() {
         return texture_id;
     }
 
-    // Load textures for each animal type and direction
-    for (int type = 0; type < ANIMAL_COUNT; type++) {
+    // Load textures for each animal species and direction
+    int successful_species = 0;
+    
+    for (int species_idx = 0; species_idx < ANIMAL_SPECIES_COUNT && species_idx < MAX_ANIMAL_SPECIES; species_idx++) {
+        const AnimalSpecies* species = &ANIMAL_SPECIES[species_idx];
         bool all_loaded = true;
         
         for (int dir = 0; dir < ANIMAL_DIRECTIONS; dir++) {
-            animal_textures[type][dir] = loadTexture(animal_texture_paths[type][dir]);
+            // Build the filename using the folder name and direction number (1-8)
+            char filename[256];
+            snprintf(filename, sizeof(filename), "textures/animals/%s/%d.tga", 
+                    species->folder_name, dir + 1);
             
-            if (animal_textures[type][dir] == 0) {
+            animal_textures[species_idx][dir] = loadTexture(filename);
+            
+            if (animal_textures[species_idx][dir] == 0) {
                 logWarning("Failed to load texture for animal type %s, direction %d: %s", 
-                          animal_type_names[type], dir, animal_texture_paths[type][dir]);
+                          species->name, dir + 1, filename);
                 all_loaded = false;
             }
         }
         
-        animal_textures_loaded[type] = all_loaded;
+        animal_textures_loaded[species_idx] = all_loaded;
         
         if (all_loaded) {
-            logInfo("Successfully loaded all textures for animal type: %s", animal_type_names[type]);
+            logInfo("Successfully loaded all textures for animal type: %s", species->name);
+            successful_species++;
         } else {
-            logWarning("Not all textures were loaded for animal type: %s", animal_type_names[type]);
+            logWarning("Not all textures were loaded for animal type: %s", species->name);
         }
     }
 
-    // Return true if at least one animal type was fully loaded
-    for (int i = 0; i < ANIMAL_COUNT; i++) {
-        if (animal_textures_loaded[i]) {
-            return true;
-        }
-    }
-    
-    logError("Failed to load any complete set of animal textures");
-    return false;
+    // Return true if at least one animal species was fully loaded
+    return successful_species > 0;
 }
 
 // Function to ensure we have enough capacity for animals
@@ -177,15 +152,43 @@ void createAnimals(int count, float terrain_size) {
     float terrain_offset_z = TERRAIN_POSITION_Z;
     float ground_level = TERRAIN_POSITION_Y;
     
+    // Count how many animal species have their textures loaded
+    int available_species_count = 0;
+    for (int i = 0; i < ANIMAL_SPECIES_COUNT && i < MAX_ANIMAL_SPECIES; i++) {
+        if (animal_textures_loaded[i]) {
+            available_species_count++;
+        }
+    }
+    
+    // Return if no animal species are available
+    if (available_species_count == 0) {
+        logError("No animal species available with loaded textures");
+        return;
+    }
+    
     // Create animals
     for (int i = 0; i < count && i < animal_capacity; i++) {
-        // Randomly select animal type
-        animals[i].type = rand() % ANIMAL_COUNT;
+        // Select a random species from the ones with loaded textures
+        int species_offset = rand() % available_species_count;
+        int species_index = -1;
         
-        if (!animal_textures_loaded[animals[i].type]) {
-            // Skip this animal if its textures aren't loaded
-            continue;
+        // Find the nth loaded species
+        for (int j = 0, found = 0; j < ANIMAL_SPECIES_COUNT; j++) {
+            if (animal_textures_loaded[j]) {
+                if (found == species_offset) {
+                    species_index = j;
+                    break;
+                }
+                found++;
+            }
         }
+        
+        // Skip this animal if we couldn't find a valid species
+        if (species_index < 0) continue;
+        
+        // Store the species index
+        animals[i].species_index = species_index;
+        const AnimalSpecies* species = &ANIMAL_SPECIES[species_index];
         
         // For debugging purposes, place animals in a grid pattern near origin
         // This makes them easier to find during testing
@@ -213,24 +216,16 @@ void createAnimals(int count, float terrain_size) {
         animals[i].state_timer = ANIMAL_MIN_IDLE_TIME + 
                                 ((float)rand() / RAND_MAX) * (ANIMAL_MAX_IDLE_TIME - ANIMAL_MIN_IDLE_TIME);
         
-        // Set maximum velocity based on animal type
-        if (animals[i].type == ANIMAL_CHICKEN) {
-            animals[i].max_velocity = ANIMAL_CHICKEN_SPEED;
-        } else if (animals[i].type == ANIMAL_DINO) {
-            animals[i].max_velocity = ANIMAL_DINO_SPEED;
-        }
+        // Set maximum velocity based on animal species
+        animals[i].max_velocity = species->speed;
         
-        // Set dimensions based on animal type - INCREASE SIZE FOR EASIER VISIBILITY
-        if (animals[i].type == ANIMAL_CHICKEN) {
-            animals[i].width = 1.0f + ((float)rand() / RAND_MAX) * 0.2f;  // 1.0-1.2m (was 0.5-0.7m)
-            animals[i].height = 1.2f + ((float)rand() / RAND_MAX) * 0.2f; // 1.2-1.4m (was 0.6-0.8m)
-        } else if (animals[i].type == ANIMAL_DINO) {
-            animals[i].width = 2.0f + ((float)rand() / RAND_MAX) * 0.3f;  // 2.0-2.3m (was 1.0-1.3m)
-            animals[i].height = 3.0f + ((float)rand() / RAND_MAX) * 0.5f; // 3.0-3.5m (was 1.5-2.0m)
-        }
+        // Set dimensions based on animal species with some small random variation (+/- 10%)
+        float scale_variation = 0.9f + ((float)rand() / RAND_MAX) * 0.2f;  // 0.9 to 1.1
+        animals[i].width = species->width * scale_variation;
+        animals[i].height = species->height * scale_variation;
         
-        // Position on ground level - RAISE SLIGHTLY HIGHER
-        animals[i].y = ground_level + 0.05f;  // Raised from 0.01f to 0.05f to avoid z-fighting
+        // Position on ground level with small offset to avoid z-fighting
+        animals[i].y = ground_level + 0.05f;
         
         // Chunk coordinates (for future use with chunks)
         animals[i].chunk_x = 0;
@@ -241,16 +236,15 @@ void createAnimals(int count, float terrain_size) {
         
         animal_count++;
         
-        logInfo("Created animal %d: type=%s, position=(%.2f, %.2f, %.2f), size=%.2fx%.2f", 
-                i, animal_type_names[animals[i].type], 
-                animals[i].x, animals[i].y, animals[i].z, 
-                animals[i].width, animals[i].height);
+        logInfo("Created animal %d: type=%s, position=(%.2f, %.2f, %.2f), size=%.2fx%.2f, speed=%.2f, behavior=%d", 
+                i, species->name, animals[i].x, animals[i].y, animals[i].z, 
+                animals[i].width, animals[i].height, species->speed, species->behavior);
     }
     
     logInfo("Created %d animals on the terrain", animal_count);
 }
 
-// Draw a billboard that always faces the camera (similar to vegetation system)
+// Draw a billboard that always faces the camera
 static void drawBillboard(float x, float y, float z, float width, float height, GLuint texture) {
     // Only draw if we have a valid texture
     if (texture == 0) return;
@@ -328,97 +322,6 @@ static void drawBillboard(float x, float y, float z, float width, float height, 
     glPopMatrix();
 }
 
-// Draw an animal sprite facing a specific direction
-static void drawAnimalSprite(float x, float y, float z, float width, float height, 
-                            GLuint texture, float rotation) {
-    // Only draw if we have a valid texture
-    if (texture == 0) return;
-    
-    // Save the current matrix
-    glPushMatrix();
-    
-    // Position at the base of the sprite
-    glTranslatef(x, y, z);
-    
-    // Get the current modelview matrix
-    float modelview[16];
-    glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
-    
-    // Extract camera right and up vectors to create a billboard that faces the camera
-    // but keeps animal rotation - create a rotation matrix
-    
-    // Modified billboard matrix that preserves vertical Y axis
-    // but makes animal face the camera in XZ plane
-    float billboardMatrix[16];
-    // Copy original matrix to preserve translation
-    for (int i = 0; i < 16; i++) {
-        billboardMatrix[i] = modelview[i];
-    }
-    
-    // Clear rotation components in XZ plane but preserve Y rotation
-    billboardMatrix[0] = cosf(rotation * M_PI / 180.0f);  // Custom rotation
-    billboardMatrix[2] = -sinf(rotation * M_PI / 180.0f);  // Custom rotation
-    billboardMatrix[8] = sinf(rotation * M_PI / 180.0f);  // Custom rotation
-    billboardMatrix[10] = cosf(rotation * M_PI / 180.0f);  // Custom rotation
-    
-    // Keep Y axis vertical
-    billboardMatrix[1] = 0.0f;
-    billboardMatrix[4] = 0.0f;
-    billboardMatrix[5] = 1.0f;
-    billboardMatrix[6] = 0.0f;
-    billboardMatrix[9] = 0.0f;
-    
-    // Apply the modified matrix
-    glLoadMatrixf(billboardMatrix);
-    
-    // Enable texturing and proper alpha blending
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    // Use alpha testing to avoid rendering transparent pixels
-    glEnable(GL_ALPHA_TEST);
-    glAlphaFunc(GL_GREATER, 0.1f); // Lower alpha threshold to 0.1 for better visibility
-    
-    // Bind the texture
-    glBindTexture(GL_TEXTURE_2D, texture);
-    
-    // Half width for quad vertices
-    float half_width = width / 2.0f;
-    
-    // Debug visual - add color tinting to make animals stand out during debugging
-    glColor4f(1.2f, 1.2f, 1.0f, 1.0f); // Slightly yellowish tint to make them stand out
-    
-    // Draw quad
-    glBegin(GL_QUADS);
-    
-    // Bottom left - anchored at ground level
-    glTexCoord2f(0.0f, 1.0f);  // Flip texture coordinates vertically
-    glVertex3f(-half_width, 0.0f, 0.0f);
-    
-    // Bottom right
-    glTexCoord2f(1.0f, 1.0f);  // Flip texture coordinates vertically
-    glVertex3f(half_width, 0.0f, 0.0f);
-    
-    // Top right
-    glTexCoord2f(1.0f, 0.0f);  // Flip texture coordinates vertically
-    glVertex3f(half_width, height, 0.0f);
-    
-    // Top left
-    glTexCoord2f(0.0f, 0.0f);  // Flip texture coordinates vertically
-    glVertex3f(-half_width, height, 0.0f);
-    
-    glEnd();
-    
-    // Restore state
-    glDisable(GL_ALPHA_TEST);
-    glDisable(GL_BLEND);
-    glDisable(GL_TEXTURE_2D);
-    
-    // Restore the previous matrix
-    glPopMatrix();
-}
-
 // Render all animals with directional sprites
 void renderAnimals(float camera_x, float camera_z) {
     // For properly lit animals, we need to keep lighting enabled
@@ -441,6 +344,11 @@ void renderAnimals(float camera_x, float camera_z) {
     // Render each animal with the appropriate directional sprite
     for (int i = 0; i < animal_count; i++) {
         if (animals[i].active) {
+            // Skip if species index is invalid
+            if (animals[i].species_index < 0 || animals[i].species_index >= ANIMAL_SPECIES_COUNT) {
+                continue;
+            }
+            
             // Calculate angle between camera and animal in the XZ plane
             float dx = camera_x - animals[i].x;
             float dz = camera_z - animals[i].z;
@@ -465,7 +373,7 @@ void renderAnimals(float camera_x, float camera_z) {
             direction_index = (ANIMAL_DIRECTIONS - 1) - direction_index;
             
             // Get the texture for this animal type and direction
-            GLuint texture = animal_textures[animals[i].type][direction_index];
+            GLuint texture = animal_textures[animals[i].species_index][direction_index];
             
             // Draw the animal sprite - using fixed billboard to always face camera
             drawBillboard(
@@ -503,6 +411,13 @@ void updateAnimals(float delta_time) {
     for (int i = 0; i < animal_count; i++) {
         if (!animals[i].active) continue;
         
+        // Skip if species index is invalid
+        if (animals[i].species_index < 0 || animals[i].species_index >= ANIMAL_SPECIES_COUNT) {
+            continue;
+        }
+        
+        const AnimalSpecies* species = &ANIMAL_SPECIES[animals[i].species_index];
+        
         // Update state timer
         animals[i].state_timer -= delta_time;
         
@@ -513,10 +428,11 @@ void updateAnimals(float delta_time) {
                 // Transition from idle to walking
                 animals[i].state = ANIMAL_WALKING;
                 
-                // Pick a random direction to walk in
+                // Pick a random direction to walk in (can be adjusted based on behavior)
                 animals[i].direction = ((float)rand() / RAND_MAX) * 360.0f;
                 
-                // Set full velocity for movement
+                // Adjust behavior based on animal type (future expansion)
+                // For now just set velocity
                 animals[i].velocity = animals[i].max_velocity;
                 
                 // Set random duration for walking state
