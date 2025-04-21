@@ -14,6 +14,9 @@ bool initAudio(AudioSystem* audio) {
         return false;
     }
     
+    // Allocate more mixer channels for sound effects
+    Mix_AllocateChannels(16);
+    
     // Set up music tracks array
     audio->num_tracks = NUM_MUSIC_TRACKS;
     audio->music_tracks = (Mix_Music**)malloc(audio->num_tracks * sizeof(Mix_Music*));
@@ -30,6 +33,40 @@ bool initAudio(AudioSystem* audio) {
         logError("Failed to load menu music! SDL_mixer Error: %s\n", Mix_GetError());
     } else {
         logInfo("Menu music loaded successfully: %s\n", MENU_MUSIC_FILE);
+    }
+    
+    // Load ambient sound as a chunk
+    audio->ambient_sound = Mix_LoadWAV(AMBIENT_SOUND_FILE);
+    if (!audio->ambient_sound) {
+        logError("Failed to load ambient sound! SDL_mixer Error: %s\n", Mix_GetError());
+    } else {
+        logInfo("Ambient sound loaded successfully: %s\n", AMBIENT_SOUND_FILE);
+        // Set default volume for ambient sound
+        Mix_VolumeChunk(audio->ambient_sound, AMBIENT_VOLUME);
+    }
+    
+    // Initialize sound effects array
+    audio->num_sound_effects = 0; // No sound effects loaded yet
+    audio->sound_effects = NULL;
+    
+    // Load chop sound effects
+    audio->num_sound_effects = 4; // 4 chop sounds
+    audio->sound_effects = (Mix_Chunk**)malloc(audio->num_sound_effects * sizeof(Mix_Chunk*));
+    
+    char chop_files[4][20] = {"audio/chop1.mp3", "audio/chop2.mp3", "audio/chop3.mp3", "audio/chop4.mp3"};
+    bool loaded_chop_sounds = false;
+    
+    for (int i = 0; i < audio->num_sound_effects; i++) {
+        audio->sound_effects[i] = Mix_LoadWAV(chop_files[i]);
+        if (!audio->sound_effects[i]) {
+            logError("Failed to load sound effect %s! SDL_mixer Error: %s\n", 
+                   chop_files[i], Mix_GetError());
+        } else {
+            logInfo("Sound effect loaded successfully: %s\n", chop_files[i]);
+            loaded_chop_sounds = true;
+            // Set volume for sound effect
+            Mix_VolumeChunk(audio->sound_effects[i], SFX_VOLUME);
+        }
     }
     
     // Load all music tracks
@@ -57,14 +94,17 @@ bool initAudio(AudioSystem* audio) {
     audio->current_gameplay_track = 0;
     audio->track_switch_timer = 0.0f;
     audio->in_menu_music = false;
+    audio->ambient_playing = false;
+    audio->ambient_channel = -1; // No channel assigned yet
+    audio->sfx_enabled = true; // Enable SFX by default
     
     // Set default volume
     Mix_VolumeMusic(MUSIC_VOLUME);
     
     audio->music_playing = false;
-    audio->initialized = loaded_at_least_one || audio->menu_music;
+    audio->initialized = loaded_at_least_one || audio->menu_music || audio->ambient_sound || loaded_chop_sounds;
     
-    // Return success if at least one track or menu music loaded
+    // Return success if at least one audio resource loaded
     return audio->initialized;
 }
 
@@ -122,6 +162,51 @@ bool playMenuMusic(AudioSystem* audio) {
     return false;
 }
 
+// Play ambient sound loop using a channel for simultaneous playback with music
+bool playAmbientSound(AudioSystem* audio) {
+    // Only attempt to play if audio is initialized, ambient sound is loaded, and sfx are enabled
+    if (audio->initialized && audio->ambient_sound && audio->sfx_enabled) {
+        // Stop the ambient sound if it's already playing
+        if (audio->ambient_playing && audio->ambient_channel != -1) {
+            Mix_HaltChannel(audio->ambient_channel);
+        }
+        
+        // Play ambient sound in a loop (-1 for infinite loop)
+        audio->ambient_channel = Mix_PlayChannel(-1, audio->ambient_sound, -1);
+        if (audio->ambient_channel == -1) {
+            logError("Failed to play ambient sound! SDL_mixer Error: %s\n", Mix_GetError());
+            audio->ambient_playing = false;
+            return false;
+        } else {
+            audio->ambient_playing = true;
+            logInfo("Playing ambient sound loop on channel %d\n", audio->ambient_channel);
+            return true;
+        }
+    }
+    return false;
+}
+
+// Pause ambient sound
+void pauseAmbientSound(AudioSystem* audio) {
+    if (audio->initialized && audio->ambient_playing && audio->ambient_channel != -1) {
+        Mix_Pause(audio->ambient_channel);
+        audio->ambient_playing = false;
+        logInfo("Paused ambient sound on channel %d\n", audio->ambient_channel);
+    }
+}
+
+// Resume ambient sound
+void resumeAmbientSound(AudioSystem* audio) {
+    if (audio->initialized && !audio->ambient_playing && audio->ambient_channel != -1) {
+        Mix_Resume(audio->ambient_channel);
+        audio->ambient_playing = true;
+        logInfo("Resumed ambient sound on channel %d\n", audio->ambient_channel);
+    } else if (audio->initialized && audio->sfx_enabled && audio->ambient_sound) {
+        // If we can't resume, try playing it again
+        playAmbientSound(audio);
+    }
+}
+
 // Play next track in the gameplay playlist
 bool playNextGameplayTrack(AudioSystem* audio) {
     // Move to next track in playlist
@@ -163,6 +248,24 @@ void playBackgroundMusic(AudioSystem* audio) {
     if (audio->initialized && !audio->music_playing) {
         playRandomGameplayTrack(audio);
     }
+}
+
+// Play a sound effect if SFX are enabled
+bool playSoundEffect(AudioSystem* audio, int sfx_index) {
+    if (audio->initialized && audio->sfx_enabled && 
+        sfx_index >= 0 && sfx_index < audio->num_sound_effects) {
+        
+        Mix_Chunk* effect = audio->sound_effects[sfx_index];
+        if (effect) {
+            int channel = Mix_PlayChannel(-1, effect, 0);
+            if (channel == -1) {
+                logError("Failed to play sound effect! SDL_mixer Error: %s\n", Mix_GetError());
+                return false;
+            }
+            return true;
+        }
+    }
+    return false;
 }
 
 // Pause background music
@@ -209,6 +312,22 @@ void cleanupAudio(AudioSystem* audio) {
         if (audio->menu_music) {
             Mix_FreeMusic(audio->menu_music);
             audio->menu_music = NULL;
+        }
+        
+        // Free ambient sound
+        if (audio->ambient_sound) {
+            Mix_FreeChunk(audio->ambient_sound);
+            audio->ambient_sound = NULL;
+        }
+        
+        // Free sound effects
+        if (audio->sound_effects) {
+            for (int i = 0; i < audio->num_sound_effects; i++) {
+                if (audio->sound_effects[i]) {
+                    Mix_FreeChunk(audio->sound_effects[i]);
+                }
+            }
+            free(audio->sound_effects);
         }
         
         // Free arrays

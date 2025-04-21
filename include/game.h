@@ -24,6 +24,7 @@ typedef enum {
 // Settings options
 typedef struct {
     bool sound_enabled;
+    bool sfx_enabled;     // New setting for sound effects
     bool high_terrain_features;
     bool invert_y_axis;  // Y-axis inversion setting
     bool fullscreen;     // Fullscreen toggle setting
@@ -78,8 +79,8 @@ typedef struct {
     int menu_title_id;
     int menu_version_id;  // New field for engine version text
     int menu_items[6];
-    int settings_items[4]; // Increased from 3 to 4 to accommodate fullscreen setting
-    int settings_values[4]; // Increased from 3 to 4 to accommodate fullscreen setting
+    int settings_items[5]; // Increased from 4 to 5 to accommodate fullscreen setting
+    int settings_values[5]; // Increased from 4 to 5 to accommodate fullscreen setting
 
     // Audio system
     AudioSystem audio;

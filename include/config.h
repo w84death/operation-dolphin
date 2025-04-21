@@ -5,14 +5,15 @@
 #define WINDOW_WIDTH 640
 #define WINDOW_HEIGHT 480
 #define WINDOW_TITLE "OPERATION DOLPHIN by P1X"
-#define GAME_ENGINE_VERSION "2025-04-21 alpha5"
+#define GAME_ENGINE_VERSION "2025-04-21 alpha6"
 #define GAME_MENU_TITLE "OPERATION DOLPHIN"
 #define GAME_MENU_RESUME "RESUME GAME"
 #define GAME_MENU_NEWGAME "NEW GAME"
 #define GAME_MENU_SETTINGS "SETTINGS"
 #define GAME_MENU_QUIT "QUIT"
 #define GAME_SETTINGS_QUALITY "QUALITY:"
-#define GAME_SETTINGS_SOUND "SOUND:"
+#define GAME_SETTINGS_SOUND "MUSIC:"
+#define GAME_SETTINGS_SFX "SFX:"
 #define GAME_SETTINGS_HIGH "HIGH"
 #define GAME_SETTINGS_LOW "LOW"
 #define GAME_SETTINGS_ON "ON"
@@ -30,11 +31,14 @@
 #define AUDIO_CHANNELS 2
 #define AUDIO_CHUNKSIZE 2048
 #define MUSIC_VOLUME 64  // 0-128 range for SDL_mixer
+#define SFX_VOLUME 64    // 0-128 range for SDL_mixer
+#define AMBIENT_VOLUME 48 // Slightly lower volume for ambient sounds
 
 #define MENU_MUSIC_FILE "music/menu.mp3"
 #define MUSIC_TRACK_1 "music/track1.mp3"
 #define MUSIC_TRACK_2 "music/track2.mp3"
 #define MUSIC_TRACK_3 "music/menu.mp3"
+#define AMBIENT_SOUND_FILE "audio/ambient.mp3"
 #define NUM_MUSIC_TRACKS 3
 #define TRACK_SWITCH_TIME 120.0f  // Time in seconds before switching tracks
 

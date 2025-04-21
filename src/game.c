@@ -74,6 +74,29 @@ bool loadSettings(GameSettings* settings) {
 
 // Initialize the game state and resources
 bool initGame(GameState* game) {
+    // Initialize game state
+    game->running = true;
+    game->game_started = false;
+    game->game_paused = false;
+    game->fullscreen = false;
+    game->last_time = 0.0f;
+    game->frame_count = 0;
+    game->fps_last_time = 0;
+    
+    // Initialize game_state_ptr for input system
+    game_state_ptr = game;
+    
+    // Set up default settings
+    game->settings.sound_enabled = true;
+    game->settings.sfx_enabled = true; // Default to SFX enabled
+    game->settings.high_terrain_features = true;
+    game->settings.invert_y_axis = MOUSE_INVERT_Y_DEFAULT;
+    game->settings.fullscreen = false;
+    game->settings.foliage_seed = FOLIAGE_DEFAULT_SEED;
+    
+    // Load settings from file if available
+    loadSettings(&game->settings);
+    
     // Set global pointer to current game state (for input handling)
     game_state_ptr = game;
     
@@ -414,6 +437,11 @@ void resetGame(GameState* game) {
         playBackgroundMusic(&game->audio);
     }
     
+    // Play ambient sound in the background if SFX are enabled
+    if (game->settings.sfx_enabled) {
+        playAmbientSound(&game->audio);
+    }
+    
     // Update UI
     updateGameStats(game);
 }
@@ -464,44 +492,54 @@ void initMenu(GameState* game) {
     
     // Create settings menu items (initially hidden)
     game->settings_items[0] = createTextElement(&game->menu_ui, GAME_SETTINGS_QUALITY, 
-                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 - 60, 
+                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 - 90, 
                                               primary_color, TEXT_ALIGN_RIGHT);
     
     game->settings_items[1] = createTextElement(&game->menu_ui, GAME_SETTINGS_SOUND, 
-                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2, 
+                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 - 30, 
+                                              primary_color, TEXT_ALIGN_RIGHT);
+                                              
+    // Add SFX setting
+    game->settings_items[2] = createTextElement(&game->menu_ui, GAME_SETTINGS_SFX, 
+                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 + 30, 
                                               primary_color, TEXT_ALIGN_RIGHT);
                                               
     // Add invert Y axis setting
-    game->settings_items[2] = createTextElement(&game->menu_ui, GAME_SETTINGS_INVERT, 
-                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 + 60, 
+    game->settings_items[3] = createTextElement(&game->menu_ui, GAME_SETTINGS_INVERT, 
+                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 + 90, 
                                               primary_color, TEXT_ALIGN_RIGHT);
                                               
     // Add fullscreen toggle setting
-    game->settings_items[3] = createTextElement(&game->menu_ui, "FULLSCREEN", 
-                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 + 120, 
+    game->settings_items[4] = createTextElement(&game->menu_ui, "FULLSCREEN", 
+                                              WINDOW_WIDTH / 2 - 50, WINDOW_HEIGHT / 2 + 150, 
                                               primary_color, TEXT_ALIGN_RIGHT);
     
     // Create settings values (initially hidden)
     game->settings_values[0] = createTextElement(&game->menu_ui, GAME_SETTINGS_HIGH, 
-                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 - 60, 
+                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 - 90, 
                                                primary_color, TEXT_ALIGN_LEFT);
     
     game->settings_values[1] = createTextElement(&game->menu_ui, "ON", 
-                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2, 
+                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 - 30, 
+                                               primary_color, TEXT_ALIGN_LEFT);
+                                               
+    // Add SFX value
+    game->settings_values[2] = createTextElement(&game->menu_ui, "ON", 
+                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 + 30, 
                                                primary_color, TEXT_ALIGN_LEFT);
                                                
     // Add invert Y axis value
-    game->settings_values[2] = createTextElement(&game->menu_ui, "OFF", 
-                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 + 60, 
+    game->settings_values[3] = createTextElement(&game->menu_ui, "OFF", 
+                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 + 90, 
                                                primary_color, TEXT_ALIGN_LEFT);
                                                
     // Add fullscreen toggle value
-    game->settings_values[3] = createTextElement(&game->menu_ui, "OFF", 
-                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 + 120, 
+    game->settings_values[4] = createTextElement(&game->menu_ui, "OFF", 
+                                               WINDOW_WIDTH / 2 + 50, WINDOW_HEIGHT / 2 + 150, 
                                                primary_color, TEXT_ALIGN_LEFT);
     
     // Hide settings menu initially
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         setElementVisibility(&game->menu_ui, game->settings_items[i], false);
         setElementVisibility(&game->menu_ui, game->settings_values[i], false);
     }
@@ -540,7 +578,7 @@ void updateMenuUI(GameState* game) {
         }
         
         // Hide all settings menu items (both labels and values)
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             setElementVisibility(&game->menu_ui, game->settings_items[i], false);
             setElementVisibility(&game->menu_ui, game->settings_values[i], false);
         }
@@ -556,7 +594,7 @@ void updateMenuUI(GameState* game) {
         }
         
         // Show all settings items - including fullscreen which is only visible in settings
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             setElementVisibility(&game->menu_ui, game->settings_items[i], true);
             setElementVisibility(&game->menu_ui, game->settings_values[i], true);
             
@@ -576,8 +614,10 @@ void updateMenuUI(GameState* game) {
         updateTextElement(&game->menu_ui, game->settings_values[1], 
                           game->settings.sound_enabled ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
         updateTextElement(&game->menu_ui, game->settings_values[2], 
-                          game->settings.invert_y_axis ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
+                          game->settings.sfx_enabled ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
         updateTextElement(&game->menu_ui, game->settings_values[3], 
+                          game->settings.invert_y_axis ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
+        updateTextElement(&game->menu_ui, game->settings_values[4], 
                           game->settings.fullscreen ? GAME_SETTINGS_ON : GAME_SETTINGS_OFF);
     }
     else if (game->menu_state == MENU_NONE) {
@@ -590,7 +630,7 @@ void updateMenuUI(GameState* game) {
         }
         
         // Hide all settings items
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             setElementVisibility(&game->menu_ui, game->settings_items[i], false);
             setElementVisibility(&game->menu_ui, game->settings_values[i], false);
         }
@@ -706,7 +746,7 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                 // Move selection up in the settings menu
                 game->selected_menu_item--;
                 if (game->selected_menu_item < 0) {
-                    game->selected_menu_item = 3; // Settings has 4 items (0, 1, 2, 3)
+                    game->selected_menu_item = 4; // Settings has 5 items (0, 1, 2, 3, 4)
                 }
                 updateMenuUI(game);
                 break;
@@ -714,7 +754,7 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
             case SDLK_DOWN:
                 // Move selection down in the settings menu
                 game->selected_menu_item++;
-                if (game->selected_menu_item > 3) {
+                if (game->selected_menu_item > 4) {
                     game->selected_menu_item = 0;
                 }
                 updateMenuUI(game);
@@ -740,8 +780,10 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         
                         // Turn music on/off based on setting
                         if (game->settings.sound_enabled) {
-                            if (game->game_started) {
+                            if (game->game_started && !game->game_paused) {
                                 playBackgroundMusic(&game->audio);
+                            } else {
+                                playMenuMusic(&game->audio);
                             }
                         } else {
                             pauseBackgroundMusic(&game->audio);
@@ -750,13 +792,28 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         saveSettings(&game->settings);
                         break;
                         
-                    case 2: // INVERT Y AXIS
+                    case 2: // SFX
+                        game->settings.sfx_enabled = !game->settings.sfx_enabled;
+                        
+                        // Turn ambient sound on/off based on setting
+                        if (game->settings.sfx_enabled) {
+                            if (game->game_started) {
+                                playAmbientSound(&game->audio);
+                            }
+                        } else {
+                            pauseAmbientSound(&game->audio);
+                        }
+                        // Save settings after change
+                        saveSettings(&game->settings);
+                        break;
+                        
+                    case 3: // INVERT Y AXIS
                         game->settings.invert_y_axis = !game->settings.invert_y_axis;
                         // Save settings after change
                         saveSettings(&game->settings);
                         break;
                         
-                    case 3: // FULLSCREEN
+                    case 4: // FULLSCREEN
                         // Toggle fullscreen using our unified function
                         toggleFullscreen(game, !game->fullscreen);
                         break;
@@ -784,8 +841,10 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         
                         // Turn music on/off based on setting
                         if (game->settings.sound_enabled) {
-                            if (game->game_started) {
+                            if (game->game_started && !game->game_paused) {
                                 playBackgroundMusic(&game->audio);
+                            } else {
+                                playMenuMusic(&game->audio);
                             }
                         } else {
                             pauseBackgroundMusic(&game->audio);
@@ -794,13 +853,28 @@ void handleMenuInput(GameState* game, SDL_Keycode key) {
                         saveSettings(&game->settings);
                         break;
                         
-                    case 2: // INVERT Y AXIS
+                    case 2: // SFX
+                        game->settings.sfx_enabled = !game->settings.sfx_enabled;
+                        
+                        // Turn ambient sound on/off based on setting
+                        if (game->settings.sfx_enabled) {
+                            if (game->game_started) {
+                                playAmbientSound(&game->audio);
+                            }
+                        } else {
+                            pauseAmbientSound(&game->audio);
+                        }
+                        // Save settings after change
+                        saveSettings(&game->settings);
+                        break;
+                        
+                    case 3: // INVERT Y AXIS
                         game->settings.invert_y_axis = !game->settings.invert_y_axis;
                         // Save settings after change
                         saveSettings(&game->settings);
                         break;
                         
-                    case 3: // FULLSCREEN
+                    case 4: // FULLSCREEN
                         // Toggle fullscreen using our unified function
                         toggleFullscreen(game, !game->fullscreen);
                         break;
