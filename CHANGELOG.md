@@ -9,6 +9,8 @@ FUTURE PLANS:
 
 alpha6:
     - game logo image
+    - more dinosaurs
+    - ambient sounds
 
 alpha5:
     - animals: 8-sided 2D textures
