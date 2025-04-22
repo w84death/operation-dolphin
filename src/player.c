@@ -102,13 +102,20 @@ void startCuttingFoliage(Player *player) {
         // Load the first frame of the cutting animation
         loadWeaponTexture(player, PLAYER_WEAPON_TEXTURE_0);
         
+        // Play a random machete chop sound (we have 4 sounds, index 0-3)
+        if (player->audio) {
+            int random_sound = rand() % 4;  // Randomly select one of the four chop sounds
+            playSoundEffect(player->audio, random_sound);
+            log_info("Playing machete chop sound %d", random_sound);
+        }
+        
         // Log that we're cutting
         log_info("Player is cutting foliage");
     }
 }
 
 // Initialize the player with default values and load weapon texture
-void initPlayer(Player *player) {
+void initPlayer(Player *player, AudioSystem* audio) {
     // Initialize position and orientation
     player->position_x = 0.0f;
     player->position_z = 0.0f;
@@ -118,6 +125,9 @@ void initPlayer(Player *player) {
     player->velocity_z = 0.0f;
     player->yaw = 0.0f;
     player->pitch = 0.0f;
+    
+    // Store audio system reference
+    player->audio = audio;
     
     // Physics properties - use values from config.h
     player->height = 2.0f;

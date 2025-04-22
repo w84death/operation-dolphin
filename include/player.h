@@ -5,6 +5,11 @@
 #include <GL/gl.h>
 #include "model.h"
 #include "config.h"
+#include "audio.h"  // Include audio for sound effects
+
+// Forward declaration for terrain
+typedef struct Terrain Terrain;
+typedef struct AudioSystem AudioSystem;
 
 // Player state structure
 typedef struct {
@@ -31,6 +36,9 @@ typedef struct {
     // Terrain reference for height checks
     void* terrain;     // Pointer to terrain for height checks
     
+    // Audio system reference for sound effects
+    AudioSystem* audio;
+    
     // Weapon/interaction
     GLuint weapon_texture_id;  // Texture ID for 2D weapon instead of 3D model
     int weapon_frame;          // Current animation frame (0, 1, or 2)
@@ -40,7 +48,7 @@ typedef struct {
 } Player;
 
 // Function declarations
-void initPlayer(Player *player);
+void initPlayer(Player *player, AudioSystem* audio);
 void updatePlayer(Player *player, float delta_time);
 void renderWeapon(Player *player);
 void cleanupPlayer(Player *player);

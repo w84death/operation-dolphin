@@ -227,7 +227,7 @@ bool initGame(GameState* game) {
     game->terrain = createFlatTerrain(TERRAIN_TILE_SIZE, TERRAIN_HEIGHT_SCALE);
     
     // Initialize the player
-    initPlayer(&game->player);
+    initPlayer(&game->player, &game->audio);
     
     // Set the terrain reference in the player structure
     game->player.terrain = game->terrain;
