@@ -145,7 +145,7 @@
 #define PLAYER_WEAPON_TEXTURE_1 "textures/weapons/weapon0_1.tga"
 #define PLAYER_WEAPON_TEXTURE_2 "textures/weapons/weapon0_2.tga"
 #define WEAPON_ANIM_FRAME_TIME 0.1f   // Time per animation frame in seconds
-#define FOLIAGE_CUTTING_RANGE 3.0f    // How far player can reach to cut foliage
+#define FOLIAGE_CUTTING_RANGE 2.0f    // How far player can reach to cut foliage
 #define FOLIAGE_CUTTING_COOLDOWN 0.5f // Cooldown between cuts in seconds
 
 // Terrain settings
@@ -192,7 +192,7 @@
 // Menu position settings
 #define MENU_TITLE_Y_POS (WINDOW_HEIGHT / 4)
 #define MENU_FIRST_ITEM_Y_POS (WINDOW_HEIGHT / 2 - 30)
-#define MENU_ITEM_Y_SPACING 60
+#define MENU_ITEM_Y_SPACING 40
 #define MENU_SETTINGS_LABEL_X_OFFSET 50
 #define MENU_SETTINGS_VALUE_X_OFFSET 50
 #define MENU_SETTINGS_FIRST_ITEM_Y_POS (WINDOW_HEIGHT / 2 - 60)
@@ -217,7 +217,7 @@
 #define COMPASS_WEST "W"
 
 // Item settings
-#define MAX_ITEMS 100
+#define MAX_ITEMS 16
 #define ITEM_INTERACTION_RANGE 1.0f
 #define ITEM_SPAWN_MULTIPLIER 2.0f
 
