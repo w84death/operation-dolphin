@@ -384,6 +384,13 @@ bool initGame(GameState* game) {
         toggleFullscreen(game, true);
     }
     
+    // --- Initialize Vegetation VBOs ---
+    if (!initVegetationBuffers()) {
+        logError("Failed to initialize vegetation buffers!\n");
+        // Handle error appropriately (e.g., exit or run without vegetation)
+    }
+    // --- End VBO Init ---
+
     return true;
 }
 
@@ -1154,6 +1161,10 @@ void cleanupGame(GameState* game) {
     SDL_GL_DeleteContext(game->gl_context);
     SDL_DestroyWindow(game->window);
     SDL_Quit();
+
+    // --- Cleanup Vegetation VBOs ---
+    cleanupVegetationBuffers(); 
+    // --- End VBO Cleanup ---
 }
 
 // Update compass UI based on player's direction

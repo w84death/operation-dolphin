@@ -3,6 +3,7 @@
 #include <math.h>
 #include <time.h>
 #include <GL/gl.h>
+#include <GL/glext.h> // Include for VBO functions (might need specific setup depending on OS/loader)
 #include "../include/vegetation.h"
 #include "../include/terrain.h"
 #include "../include/log.h"
@@ -24,6 +25,13 @@ static GLuint vegetation_textures_big[MAX_TEXTURES_PER_SIZE];
 static int small_texture_count = 0;
 static int medium_texture_count = 0;
 static int big_texture_count = 0;
+
+// --- VBO Data ---
+static GLuint vegetation_vbo = 0; // Single VBO for dynamic vertex data
+static GLfloat* vbo_vertex_data = NULL; // CPU buffer for vertex positions
+static GLfloat* vbo_texcoord_data = NULL; // CPU buffer for texture coordinates
+static int vbo_capacity_vertices = 0; // Current capacity of CPU buffers (in vertices)
+// --- End VBO Data ---
 
 // Set the game state pointer for settings access
 void setGameStatePointer(void* game_ptr) {
@@ -153,6 +161,38 @@ bool loadVegetationTextures() {
     return true;
 }
 
+// --- VBO Initialization ---
+bool initVegetationBuffers() {
+    // Generate the VBO
+    glGenBuffers(1, &vegetation_vbo);
+    if (vegetation_vbo == 0) {
+        logError("Failed to generate vegetation VBO\n");
+        return false;
+    }
+    logInfo("Vegetation VBO generated: ID %u\n", vegetation_vbo);
+    
+    // Initial allocation for CPU buffers (e.g., for 1000 billboards * 4 vertices)
+    vbo_capacity_vertices = 4000; 
+    vbo_vertex_data = malloc(vbo_capacity_vertices * 3 * sizeof(GLfloat)); // x, y, z
+    vbo_texcoord_data = malloc(vbo_capacity_vertices * 2 * sizeof(GLfloat)); // u, v
+    
+    if (!vbo_vertex_data || !vbo_texcoord_data) {
+        logError("Failed to allocate CPU buffers for vegetation VBO data\n");
+        glDeleteBuffers(1, &vegetation_vbo);
+        vegetation_vbo = 0;
+        free(vbo_vertex_data); // free even if NULL
+        free(vbo_texcoord_data);
+        vbo_vertex_data = NULL;
+        vbo_texcoord_data = NULL;
+        vbo_capacity_vertices = 0;
+        return false;
+    }
+    logInfo("Allocated CPU buffers for VBO (capacity: %d vertices)\n", vbo_capacity_vertices);
+
+    return true;
+}
+// --- End VBO Initialization ---
+
 // Create random vegetation with three size categories (legacy function for backward compatibility)
 void createVegetation(int count, float terrain_size) {
     // Free previous vegetation if any
@@ -184,6 +224,22 @@ void cleanupVegetation(void) {
     vegetation_count = 0;
     vegetation_capacity = 0;
 }
+
+// --- VBO Cleanup ---
+void cleanupVegetationBuffers() {
+    if (vegetation_vbo != 0) {
+        glDeleteBuffers(1, &vegetation_vbo);
+        vegetation_vbo = 0;
+        logInfo("Deleted vegetation VBO\n");
+    }
+    free(vbo_vertex_data);
+    free(vbo_texcoord_data);
+    vbo_vertex_data = NULL;
+    vbo_texcoord_data = NULL;
+    vbo_capacity_vertices = 0;
+    logInfo("Freed CPU buffers for VBO\n");
+}
+// --- End VBO Cleanup ---
 
 // Function to ensure we have enough capacity for vegetation
 static void ensureVegetationCapacity(int required_capacity) {
@@ -343,150 +399,212 @@ void createVegetationForChunk(int chunk_x, int chunk_z, float chunk_size, unsign
     srand(time(NULL));
 }
 
-// Draw a billboard that always faces the camera
+// --- REMOVE OLD drawBillboard FUNCTION ---
+/* 
 static void drawBillboard(float x, float y, float z, float width, float height, GLuint texture) {
-    // Save the current matrix
-    glPushMatrix();
-    
-    // Position at the base of the billboard
-    glTranslatef(x, y, z);
-    
-    // Get the current modelview matrix
+    // ... (old immediate mode code removed) ...
+}
+*/
+// --- END REMOVE ---
+
+// --- VBO Render Function ---
+void renderVegetation() {
+    if (vegetation_vbo == 0 || vegetation_count == 0) {
+        return; // Nothing to render or VBO not initialized
+    }
+
+    // Get camera orientation vectors from the current modelview matrix
+    // These are needed to make billboards face the camera
     float modelview[16];
     glGetFloatv(GL_MODELVIEW_MATRIX, modelview);
     
-    // Create a modelview matrix for the billboard that only contains position
-    modelview[0] = 1.0f;
-    modelview[1] = 0.0f;
-    modelview[2] = 0.0f;
+    // Camera Right vector (X column)
+    float cam_right_x = modelview[0];
+    float cam_right_y = modelview[4];
+    float cam_right_z = modelview[8];
     
-    modelview[4] = 0.0f;
-    modelview[5] = 1.0f;
-    modelview[6] = 0.0f;
-    
-    modelview[8] = 0.0f;
-    modelview[9] = 0.0f;
-    modelview[10] = 1.0f;
-    
-    glLoadMatrixf(modelview);
-    
-    // Enable texturing and proper alpha blending for vegetation
+    // Camera Up vector (Y column) - Use the actual up vector from the matrix
+    float cam_up_x = modelview[1];
+    float cam_up_y = modelview[5];
+    float cam_up_z = modelview[9];
+
+    // Material setup for unshaded textures (similar to before)
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    // Critical fix: use alpha testing to avoid transparent pixels being drawn at all
     glEnable(GL_ALPHA_TEST);
-    glAlphaFunc(GL_GREATER, 0.5f); // Only render pixels with alpha > 0.5
+    glAlphaFunc(GL_GREATER, 0.5f); // Alpha test threshold
+    glDepthMask(GL_TRUE); // Ensure depth writing is enabled
+
+    // Make textures interact with lighting correctly
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     
-    // glDepthMask(GL_FALSE); // Don't write to depth buffer for transparent objects
-    glBindTexture(GL_TEXTURE_2D, texture);
+    // Set material to ignore lighting colors but still be affected by light intensity
+    GLfloat white[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+    glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, white);
+
+    // Bind the VBO for vertex data
+    glBindBuffer(GL_ARRAY_BUFFER, vegetation_vbo);
     
-    // Half width and height for quad vertices
-    float half_width = width / 2.0f;
+    // Enable client states for vertex and texture coordinate arrays
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    // --- Batch rendering by texture --- 
+    GLuint current_texture = 0; // Track the currently bound texture
+    int current_batch_vertex_count = 0;
+
+    // Helper lambda/function to render the current batch
+    void render_current_batch() {
+        if (current_batch_vertex_count > 0) {
+            // Bind the texture for this batch
+            glBindTexture(GL_TEXTURE_2D, current_texture);
+            
+            // Upload data for this batch to the VBO
+            // We upload both position and texcoord data contiguously
+            // Positions first, then texcoords
+            glBufferData(GL_ARRAY_BUFFER, 
+                         current_batch_vertex_count * (3 + 2) * sizeof(GLfloat), 
+                         NULL, // Orphaning the buffer (performance hint)
+                         GL_STREAM_DRAW); // Data changes frequently
+            glBufferSubData(GL_ARRAY_BUFFER, 0, 
+                            current_batch_vertex_count * 3 * sizeof(GLfloat), 
+                            vbo_vertex_data);
+            glBufferSubData(GL_ARRAY_BUFFER, current_batch_vertex_count * 3 * sizeof(GLfloat), 
+                            current_batch_vertex_count * 2 * sizeof(GLfloat), 
+                            vbo_texcoord_data);
+
+            // Set vertex and texture coordinate pointers
+            glVertexPointer(3, GL_FLOAT, 0, (void*)0); // Positions are at the start
+            glTexCoordPointer(2, GL_FLOAT, 0, (void*)(current_batch_vertex_count * 3 * sizeof(GLfloat))); // Texcoords follow positions
+            
+            // Draw the batch
+            glDrawArrays(GL_QUADS, 0, current_batch_vertex_count);
+            
+            // Reset batch count for the next texture
+            current_batch_vertex_count = 0;
+        }
+    }
+
+    // Iterate through all vegetation types (Big -> Medium -> Small for rough back-to-front)
+    for (int type = 2; type >= 0; --type) {
+        GLuint* textures;
+        int texture_count;
+        switch(type) {
+            case 0: textures = vegetation_textures_small; texture_count = small_texture_count; break;
+            case 1: textures = vegetation_textures_medium; texture_count = medium_texture_count; break;
+            case 2: textures = vegetation_textures_big; texture_count = big_texture_count; break;
+            default: continue; // Should not happen
+        }
+
+        // Iterate through each texture within the current type
+        for (int tex_idx = 0; tex_idx < texture_count; ++tex_idx) {
+            GLuint texture_id = textures[tex_idx];
+            if (texture_id == 0) continue; // Skip unloaded textures
+
+            // Check if this texture requires rendering the previous batch
+            if (current_texture != 0 && current_texture != texture_id) {
+                render_current_batch();
+            }
+            current_texture = texture_id;
+
+            // Iterate through all vegetation instances to find ones using this texture
+            for (int i = 0; i < vegetation_count; ++i) {
+                if (!vegetation[i].active || vegetation[i].type != type || vegetation[i].texture_index != tex_idx) {
+                    continue; // Skip inactive or wrong type/texture
+                }
+
+                // Check if CPU buffers need resizing
+                if ((current_batch_vertex_count + 4) > vbo_capacity_vertices) {
+                    // Render what we have before resizing
+                    render_current_batch(); 
+                    current_texture = texture_id; // Reset current texture after render
+
+                    // Resize buffers (e.g., double the size)
+                    int new_capacity = vbo_capacity_vertices * 2;
+                    GLfloat* new_vertex_data = realloc(vbo_vertex_data, new_capacity * 3 * sizeof(GLfloat));
+                    GLfloat* new_texcoord_data = realloc(vbo_texcoord_data, new_capacity * 2 * sizeof(GLfloat));
+
+                    if (!new_vertex_data || !new_texcoord_data) {
+                        logError("Failed to reallocate VBO CPU buffers! Rendering may be incomplete.\n");
+                        // Attempt to continue with old buffers, but stop adding new data
+                        if (new_vertex_data) vbo_vertex_data = new_vertex_data; // Keep whichever realloc succeeded
+                        if (new_texcoord_data) vbo_texcoord_data = new_texcoord_data;
+                        goto end_render_loop; // Exit loops if resize fails critically
+                    }
+                    vbo_vertex_data = new_vertex_data;
+                    vbo_texcoord_data = new_texcoord_data;
+                    vbo_capacity_vertices = new_capacity;
+                    logInfo("Resized VBO CPU buffers to capacity: %d vertices\n", new_capacity);
+                }
+
+                // Calculate billboard vertices based on camera orientation
+                float x = vegetation[i].x;
+                float y = vegetation[i].y;
+                float z = vegetation[i].z;
+                float w = vegetation[i].width;
+                float h = vegetation[i].height;
+                float half_w = w / 2.0f;
+
+                // Calculate the 4 corner vertices of the billboard quad
+                // Bottom Left
+                vbo_vertex_data[current_batch_vertex_count*3 + 0] = x - cam_right_x * half_w;
+                vbo_vertex_data[current_batch_vertex_count*3 + 1] = y - cam_right_y * half_w; // Use camera right Y
+                vbo_vertex_data[current_batch_vertex_count*3 + 2] = z - cam_right_z * half_w;
+                vbo_texcoord_data[current_batch_vertex_count*2 + 0] = 0.0f; // U
+                vbo_texcoord_data[current_batch_vertex_count*2 + 1] = 1.0f; // V (flipped)
+                current_batch_vertex_count++;
+
+                // Bottom Right
+                vbo_vertex_data[current_batch_vertex_count*3 + 0] = x + cam_right_x * half_w;
+                vbo_vertex_data[current_batch_vertex_count*3 + 1] = y + cam_right_y * half_w;
+                vbo_vertex_data[current_batch_vertex_count*3 + 2] = z + cam_right_z * half_w;
+                vbo_texcoord_data[current_batch_vertex_count*2 + 0] = 1.0f; // U
+                vbo_texcoord_data[current_batch_vertex_count*2 + 1] = 1.0f; // V (flipped)
+                current_batch_vertex_count++;
+
+                // Top Right
+                vbo_vertex_data[current_batch_vertex_count*3 + 0] = x + cam_right_x * half_w + cam_up_x * h;
+                vbo_vertex_data[current_batch_vertex_count*3 + 1] = y + cam_right_y * half_w + cam_up_y * h;
+                vbo_vertex_data[current_batch_vertex_count*3 + 2] = z + cam_right_z * half_w + cam_up_z * h;
+                vbo_texcoord_data[current_batch_vertex_count*2 + 0] = 1.0f; // U
+                vbo_texcoord_data[current_batch_vertex_count*2 + 1] = 0.0f; // V (flipped)
+                current_batch_vertex_count++;
+
+                // Top Left
+                vbo_vertex_data[current_batch_vertex_count*3 + 0] = x - cam_right_x * half_w + cam_up_x * h;
+                vbo_vertex_data[current_batch_vertex_count*3 + 1] = y - cam_right_y * half_w + cam_up_y * h;
+                vbo_vertex_data[current_batch_vertex_count*3 + 2] = z - cam_right_z * half_w + cam_up_z * h;
+                vbo_texcoord_data[current_batch_vertex_count*2 + 0] = 0.0f; // U
+                vbo_texcoord_data[current_batch_vertex_count*2 + 1] = 0.0f; // V (flipped)
+                current_batch_vertex_count++;
+            }
+        }
+    }
+
+    // Render the final batch if any vertices were added
+    render_current_batch();
+
+end_render_loop: // Label for exiting loops if buffer resize fails
+
+    // --- Cleanup --- 
+    // Disable client states
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     
-    // Draw quad
-    glBegin(GL_QUADS);
+    // Unbind the VBO
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     
-    // Bottom left - anchored at ground level
-    glTexCoord2f(0.0f, 1.0f);  // Flip texture coordinates vertically
-    glVertex3f(-half_width, 0.0f, 0.0f);
-    
-    // Bottom right
-    glTexCoord2f(1.0f, 1.0f);  // Flip texture coordinates vertically
-    glVertex3f(half_width, 0.0f, 0.0f);
-    
-    // Top right
-    glTexCoord2f(1.0f, 0.0f);  // Flip texture coordinates vertically
-    glVertex3f(half_width, height, 0.0f);
-    
-    // Top left
-    glTexCoord2f(0.0f, 0.0f);  // Flip texture coordinates vertically
-    glVertex3f(-half_width, height, 0.0f);
-    
-    glEnd();
-    
-    // Restore state
+    // Restore OpenGL state
     glDisable(GL_ALPHA_TEST);
-    glDepthMask(GL_TRUE); // Re-enable depth writing
     glDisable(GL_BLEND);
     glDisable(GL_TEXTURE_2D);
     
-    // Restore the previous matrix
-    glPopMatrix();
+    // Restore material (optional, depends if other objects need it)
+    // glMaterialfv(GL_FRONT, GL_AMBIENT, orig_ambient);
+    // glMaterialfv(GL_FRONT, GL_DIFFUSE, orig_diffuse);
 }
-
-// Render all vegetation
-void renderVegetation() {
-    // For properly lit vegetation, we need to keep lighting enabled
-    // but disable lighting's influence on color values temporarily 
-    GLfloat ambient[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-    GLfloat diffuse[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-    
-    // Save current material state
-    GLfloat orig_ambient[4], orig_diffuse[4];
-    glGetMaterialfv(GL_FRONT, GL_AMBIENT, orig_ambient);
-    glGetMaterialfv(GL_FRONT, GL_DIFFUSE, orig_diffuse);
-    
-    // Set material to fully accept light without changing the color
-    glMaterialfv(GL_FRONT, GL_AMBIENT, ambient);
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuse);
-    
-    // Make sure textures properly interact with lighting
-    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-    // Sort vegetation by type and distance before rendering
-    // This ensures proper transparency layering (back-to-front)
-    
-    // First render big vegetation (trees, palms) since they're typically furthest
-    for (int i = 0; i < vegetation_count; i++) {
-        if (vegetation[i].active && vegetation[i].type == 2) {
-            GLuint texture = vegetation_textures_big[vegetation[i].texture_index];
-            drawBillboard(
-                vegetation[i].x, 
-                vegetation[i].y, 
-                vegetation[i].z, 
-                vegetation[i].width, 
-                vegetation[i].height, 
-                texture
-            );
-        }
-    }
-    
-    // Then render medium vegetation (bushes, aloe)
-    for (int i = 0; i < vegetation_count; i++) {
-        if (vegetation[i].active && vegetation[i].type == 1) {
-            GLuint texture = vegetation_textures_medium[vegetation[i].texture_index];
-            drawBillboard(
-                vegetation[i].x, 
-                vegetation[i].y, 
-                vegetation[i].z, 
-                vegetation[i].width, 
-                vegetation[i].height, 
-                texture
-            );
-        }
-    }
-    
-    // Finally render small vegetation (grass, flowers)
-    for (int i = 0; i < vegetation_count; i++) {
-        if (vegetation[i].active && vegetation[i].type == 0) {
-            GLuint texture = vegetation_textures_small[vegetation[i].texture_index];
-            drawBillboard(
-                vegetation[i].x, 
-                vegetation[i].y, 
-                vegetation[i].z, 
-                vegetation[i].width, 
-                vegetation[i].height, 
-                texture
-            );
-        }
-    }
-    
-    // Restore original material state
-    glMaterialfv(GL_FRONT, GL_AMBIENT, orig_ambient);
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, orig_diffuse);
-}
+// --- End VBO Render Function ---
 
 // Cut medium-sized foliage in front of the player
 void cutMediumFoliage(Player* player) {

@@ -2,7 +2,12 @@
 #define VEGETATION_H
 
 #include <stdbool.h>
-#include <GL/gl.h>
+// --- Add OpenGL Extension Header ---
+// If you're not using an extension loader like GLEW, 
+// you might need to include specific headers for VBO functions 
+// depending on your OpenGL setup. For now, assume standard GL is enough.
+#include <GL/gl.h> 
+// --- End Add ---
 #include "config.h"
 #include "player.h"
 
@@ -25,6 +30,10 @@ struct Vegetation {
 // Vegetation related functions
 void setGameStatePointer(void* game_ptr);
 bool loadVegetationTextures(void);
+// --- Add VBO Init/Cleanup ---
+bool initVegetationBuffers(void); 
+void cleanupVegetationBuffers(void);
+// --- End Add ---
 void createVegetation(int count, float terrain_size);
 void createVegetationForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed);
 void renderVegetation(void);
