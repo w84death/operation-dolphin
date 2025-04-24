@@ -10,6 +10,8 @@
 #include "vegetation.h"
 #include "static_elements.h"  // Add the static elements header
 #include "environment.h"      // Add for Wall structure
+#include "map.h"              // Add map view header
+#include "animals.h"          // Add for animal types
 
 // Settings file path
 #define SETTINGS_FILE_PATH "user_settings.cfg"
@@ -52,6 +54,15 @@ typedef struct {
     Player player;
     void* terrain; // Opaque pointer to terrain data
     Wall wall;     // Wall structure for fence around terrain
+    
+    // Map view
+    MapView map_view;  // Map view data
+    
+    // Static elements and animals
+    StaticElement* static_elements;
+    int static_element_count;
+    Animal* animals;
+    int animal_count;
     
     // SDL/OpenGL resources
     SDL_Window* window;
@@ -105,5 +116,6 @@ void cutMediumFoliage(Player* player); // New function to handle cutting medium 
 bool saveSettings(GameSettings* settings); // New function to save settings
 bool loadSettings(GameSettings* settings); // New function to load settings
 void toggleFullscreen(GameState* game, bool fullscreen); // Function to toggle fullscreen mode
+void toggleGameMapView(GameState* game); // Function to toggle game map view (renamed to avoid conflict)
 
 #endif // GAME_H

@@ -113,6 +113,11 @@ void handleKeyDown(InputState* input, SDL_Keycode key, GameState* game) {
             }
             break;
             
+        case SDLK_m:
+            // Toggle map view using the renamed function
+            toggleGameMapView(game);
+            break;
+            
         case SDLK_SPACE:
             input->keys[SDL_SCANCODE_SPACE] = true;
             break;

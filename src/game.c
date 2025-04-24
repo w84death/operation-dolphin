@@ -22,6 +22,7 @@
 #include "../include/items.h"
 #include "../include/animals.h"
 #include "../include/static_elements.h"  // Add static elements include
+#include "../include/map.h"              // Add map view include
 #include <math.h> // Include for fmodf
 
 // For the input system
@@ -314,6 +315,10 @@ bool initGame(GameState* game) {
                GAME_FONT_FILE, VERSION_FONT_SIZE);
     }
     
+    // Initialize map view
+    initializeMap(&game->map_view);
+    logInfo("Map view initialized (toggle with M key)");
+    
     // Initialize audio system
     if (!initAudio(&game->audio)) {
         logError("Failed to initialize audio system\n");
@@ -564,7 +569,7 @@ void initMenu(GameState* game) {
 // Update menu text and visibility based on current state
 void updateMenuUI(GameState* game) {
     SDL_Color primary_color = {UI_PRIMARY_COLOR_R, UI_PRIMARY_COLOR_G, UI_PRIMARY_COLOR_B, UI_PRIMARY_COLOR_A};
-    SDL_Color secondary_color = {UI_SECONDARY_COLOR_R, UI_SECONDARY_COLOR_G, UI_SECONDARY_COLOR_B, UI_SECONDARY_COLOR_A};
+    SDL_Color secondary_color = {UI_SECONDARY_COLOR_R, UI_SECONDARY_COLOR_G, UI_SECONDARY_COLOR_B, UI_PRIMARY_COLOR_A};
     SDL_Color accent_color = {UI_ACCENT_COLOR_R, UI_ACCENT_COLOR_G, UI_ACCENT_COLOR_B, UI_PRIMARY_COLOR_A};
     
     if (game->menu_state == MENU_MAIN) {
@@ -1090,6 +1095,13 @@ void renderGame(GameState* game) {
         renderWeapon(&game->player);
     }
     
+    // Render map view if active (only in-game, not in menu)
+    if (game->game_started && game->menu_state == MENU_NONE) {
+        renderMapView(&game->map_view, &game->player, &game->wall, 
+                     game->static_elements, game->static_element_count, 
+                     game->animals, game->animal_count);
+    }
+    
     // Render UI systems - game UI and menu UI
     renderUI(&game->game_ui);
     renderUI(&game->menu_ui);
@@ -1157,6 +1169,9 @@ void cleanupGame(GameState* game) {
     
     // Clean up static elements system
     cleanupStaticElements();
+    
+    // Clean up map view resources
+    cleanupMapView(&game->map_view);
     
     // Clean up audio system
     cleanupAudio(&game->audio);
@@ -1286,4 +1301,10 @@ void toggleFullscreen(GameState* game, bool fullscreen) {
 
     // Save settings after change
     saveSettings(&game->settings);
+}
+
+// Toggle the map view on and off
+void toggleGameMapView(GameState* game) {
+    toggleMapView(&game->map_view);
+    logInfo("Map view toggled: %s", game->map_view.active ? "ON" : "OFF");
 }
