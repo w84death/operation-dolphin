@@ -232,6 +232,9 @@ bool initGame(GameState* game) {
     // Set the terrain reference in the player structure
     game->player.terrain = game->terrain;
     
+    // Initialize the wall around the terrain
+    initWall(&game->wall);
+    
     // Set initial player position based on terrain height
     float initial_terrain_height = getHeightAtPoint((Terrain*)game->terrain, 0.0f, 0.0f);
     game->player.position_y = initial_terrain_height + game->player.eye_height;
@@ -249,7 +252,7 @@ bool initGame(GameState* game) {
     createVegetation(vegetation_count, TERRAIN_TILE_SIZE);
     
     // Initialize day-night cycle
-    initEnvironment();
+    initEnvironment(NULL); // Pass NULL as we don't need to store environment data
     setBackgroundColor(BG_COLOR_R, BG_COLOR_G, BG_COLOR_B, BG_COLOR_A);
     
     // Initialize items system
@@ -1044,6 +1047,9 @@ void renderGame(GameState* game) {
     
     // Render terrain
     renderTerrain(game->terrain);
+    
+    // Render wall
+    renderWall(&game->wall);
     
     // Render vegetation
     renderVegetation();

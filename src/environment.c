@@ -3,6 +3,13 @@
 #include <string.h>
 #include "../include/environment.h"
 #include "../include/config.h"
+#include "../include/model.h"
+#include "../include/log.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_opengl.h>
+#include <GL/glu.h>
+#include <GL/gl.h>
+#include <math.h>
 
 // Global variables for day-night cycle
 static float time_of_day = TIME_OF_THE_DAY_START;       // 0.0 to 1.0 representing a full day-night cycle
@@ -10,7 +17,7 @@ static float day_length = TIME_OF_THE_DAY_DURATION;      // Length of a full day
 static TimeOfDay current_time_of_day = TOD_DAY;
 
 // Initialize the environment
-void initEnvironment(void) {
+void initEnvironment(Environment *env) {
     // Initialize day-night cycle
     initDayNightCycle();
     
@@ -22,6 +29,25 @@ void initEnvironment(void) {
     
     // Set background color to match fog
     setBackgroundColor(BG_COLOR_R, BG_COLOR_G, BG_COLOR_B, BG_COLOR_A);
+    
+    // Initialize environment properties if env is not NULL
+    if (env) {
+        env->timeOfDay = TIME_OF_THE_DAY_START;
+        env->dayDuration = TIME_OF_THE_DAY_DURATION;
+        
+        // Initialize fog properties
+        env->fogStart = FOG_START;
+        env->fogEnd = FOG_END;
+        env->fogColor[0] = FOG_COLOR_R;
+        env->fogColor[1] = FOG_COLOR_G;
+        env->fogColor[2] = FOG_COLOR_B;
+        env->fogColor[3] = FOG_COLOR_A;
+        
+        // Initialize light colors
+        // We'll set these with the current time of day settings
+        TimeOfDay current_tod = getCurrentTimeOfDay();
+        setupLightingForTimeOfDay(current_tod);
+    }
     
     printf("Environment initialized with day-night cycle\n");
 }
@@ -368,4 +394,180 @@ void setupLightingForTimeOfDay(TimeOfDay time_period) {
     
     // Enable texture modulation with lighting
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+}
+
+// Initialize the wall with configuration parameters
+void initWall(Wall *wall) {
+    wall->texture = loadTextureFromFile(WALL_TEXTURE);
+    wall->inset = WALL_INSET;
+    wall->height = WALL_HEIGHT;
+    wall->thickness = WALL_THICKNESS;
+    wall->segmentLength = WALL_SEGMENT_LENGTH;
+    
+    if (wall->texture == 0) {
+        logError("Failed to load wall texture: %s", WALL_TEXTURE);
+    } else {
+        logInfo("Wall texture loaded successfully");
+    }
+}
+
+// Render the wall around the terrain
+void renderWall(Wall *wall) {
+    // Calculate wall dimensions based on terrain size and inset
+    float terrainSize = TERRAIN_TILE_SIZE;
+    float halfSize = terrainSize / 2.0f;
+    float wallStart = -halfSize + wall->inset;
+    float wallEnd = halfSize - wall->inset;
+    
+    // Skip rendering if texture failed to load
+    if (wall->texture == 0) {
+        logError("Cannot render wall - texture not loaded");
+        return;
+    }
+    
+    // Enable texture mapping
+    glEnable(GL_TEXTURE_2D);
+    
+    // Bind the fence texture
+    glBindTexture(GL_TEXTURE_2D, wall->texture);
+    
+    // Enable vertex and texture arrays
+    glEnableClientState(GL_VERTEX_ARRAY);  // Added this line
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    
+    // Set material properties for the wall
+    float matAmbient[] = { 0.7f, 0.7f, 0.7f, 1.0f };
+    float matDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glMaterialfv(GL_FRONT, GL_AMBIENT, matAmbient);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, matDiffuse);
+    
+    // Render the wall segments
+    // North side (positive Z)
+    for (float x = wallStart; x < wallEnd; x += wall->segmentLength) {
+        float segmentLength = fmin(wall->segmentLength, wallEnd - x);
+        
+        glPushMatrix();
+        glTranslatef(x, 0, wallEnd);
+        renderWallSegment(wall, segmentLength, 0);
+        glPopMatrix();
+    }
+    
+    // South side (negative Z)
+    for (float x = wallStart; x < wallEnd; x += wall->segmentLength) {
+        float segmentLength = fmin(wall->segmentLength, wallEnd - x);
+        
+        glPushMatrix();
+        glTranslatef(x, 0, wallStart);
+        glRotatef(180, 0, 1, 0);
+        renderWallSegment(wall, segmentLength, 0);
+        glPopMatrix();
+    }
+    
+    // East side (positive X)
+    for (float z = wallStart; z < wallEnd; z += wall->segmentLength) {
+        float segmentLength = fmin(wall->segmentLength, wallEnd - z);
+        
+        glPushMatrix();
+        glTranslatef(wallEnd, 0, z);
+        glRotatef(90, 0, 1, 0);
+        renderWallSegment(wall, segmentLength, 0);
+        glPopMatrix();
+    }
+    
+    // West side (negative X)
+    for (float z = wallStart; z < wallEnd; z += wall->segmentLength) {
+        float segmentLength = fmin(wall->segmentLength, wallEnd - z);
+        
+        glPushMatrix();
+        glTranslatef(wallStart, 0, z);
+        glRotatef(-90, 0, 1, 0);
+        renderWallSegment(wall, segmentLength, 0);
+        glPopMatrix();
+    }
+    
+    // Disable client states
+    glDisableClientState(GL_VERTEX_ARRAY);  // Added this line
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    
+    // Unbind texture
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
+}
+
+// Helper function to render a single wall segment
+void renderWallSegment(Wall *wall, float length, float heightOffset) {
+    // Enable alpha blending for transparent parts of fence
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.1f); // Skip nearly transparent pixels
+    
+    // Better texture coordinates that repeat the fence texture properly
+    float texCoords[] = {
+        0.0f, 1.0f,       // Bottom left
+        length / 2.0f, 1.0f,  // Bottom right (repeat texture every 2 units)
+        length / 2.0f, 0.0f,  // Top right
+        0.0f, 0.0f        // Top left
+    };
+    
+    // Reversed vertex order to make the wall visible from inside the terrain
+    float vertices[] = {
+        // Original order was: BL, BR, TR, TL
+        // Reversed to: BR, BL, TL, TR
+        length, 0.0f + heightOffset, 0.0f,      // Bottom right
+        0.0f, 0.0f + heightOffset, 0.0f,        // Bottom left
+        0.0f, wall->height + heightOffset, 0.0f, // Top left
+        length, wall->height + heightOffset, 0.0f // Top right
+    };
+    
+    // Also reverse texture coordinates to match reversed vertices
+    float reversedTexCoords[] = {
+        length / 2.0f, 1.0f,  // Bottom right
+        0.0f, 1.0f,       // Bottom left
+        0.0f, 0.0f,       // Top left
+        length / 2.0f, 0.0f   // Top right
+    };
+    
+    glTexCoordPointer(2, GL_FLOAT, 0, reversedTexCoords);
+    glVertexPointer(3, GL_FLOAT, 0, vertices);
+    glDrawArrays(GL_QUADS, 0, 4);
+    
+    // Disable alpha testing and blending when done
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_BLEND);
+}
+
+// Check for collision with the wall
+int checkWallCollision(float x, float z, float radius) {
+    float terrainSize = TERRAIN_TILE_SIZE;
+    float halfSize = terrainSize / 2.0f;
+    float wallStart = -halfSize + WALL_INSET;
+    float wallEnd = halfSize - WALL_INSET;
+    
+    // Add a small buffer to prevent getting too close to the wall
+    float buffer = radius + 0.1f;
+    
+    // Check collision with each wall
+    // North wall (positive Z)
+    if (z + buffer > wallEnd && x >= wallStart - buffer && x <= wallEnd + buffer) {
+        return 1;
+    }
+    
+    // South wall (negative Z)
+    if (z - buffer < wallStart && x >= wallStart - buffer && x <= wallEnd + buffer) {
+        return 1;
+    }
+    
+    // East wall (positive X)
+    if (x + buffer > wallEnd && z >= wallStart - buffer && z <= wallEnd + buffer) {
+        return 1;
+    }
+    
+    // West wall (negative X)
+    if (x - buffer < wallStart && z >= wallStart - buffer && z <= wallEnd + buffer) {
+        return 1;
+    }
+    
+    // No collision
+    return 0;
 }

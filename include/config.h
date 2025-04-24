@@ -155,6 +155,13 @@
 #define TERRAIN_TILE_SIZE 50.0f
 #define TERRAIN_HEIGHT_SCALE 2.0f
 
+// Wall settings
+#define WALL_TEXTURE "textures/infrastructure/fence1.tga"
+#define WALL_HEIGHT 2.0f
+#define WALL_THICKNESS 0.5f
+#define WALL_INSET 10.0f  // Distance from terrain edge
+#define WALL_SEGMENT_LENGTH 2.0f  // Length of each fence segment
+
 // Billboard vegetation settings
 #define TERRAIN_MAX_FEATURES 5000
 #define VEGETATION_DENSITY_SMALL 1.0f  // Multiplier for small vegetation

@@ -9,6 +9,7 @@
 #include "audio.h"
 #include "vegetation.h"
 #include "static_elements.h"  // Add the static elements header
+#include "environment.h"      // Add for Wall structure
 
 // Settings file path
 #define SETTINGS_FILE_PATH "user_settings.cfg"
@@ -50,6 +51,7 @@ typedef struct {
     // Player, camera and world
     Player player;
     void* terrain; // Opaque pointer to terrain data
+    Wall wall;     // Wall structure for fence around terrain
     
     // SDL/OpenGL resources
     SDL_Window* window;
@@ -102,6 +104,6 @@ void updateCompassUI(GameState* game); // Added missing declaration
 void cutMediumFoliage(Player* player); // New function to handle cutting medium foliage
 bool saveSettings(GameSettings* settings); // New function to save settings
 bool loadSettings(GameSettings* settings); // New function to load settings
-void toggleFullscreen(GameState* game, bool fullscreen); // Function to consistently toggle fullscreen mode
+void toggleFullscreen(GameState* game, bool fullscreen); // Function to toggle fullscreen mode
 
 #endif // GAME_H

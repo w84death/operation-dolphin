@@ -7,6 +7,7 @@
 #include "../include/terrain.h" // Add terrain header for height checks
 #include "../include/config.h"
 #include "../include/log.h"
+#include "../include/environment.h" // Added for checkWallCollision
 
 // Include stb_image.h after all other includes
 #define STBI_ONLY_TGA
@@ -158,8 +159,42 @@ void updatePlayer(Player *player, float delta_time) {
         // Get the terrain height at the player's current position
         float terrain_height = getHeightAtPoint((Terrain*)player->terrain, player->position_x, player->position_z);
         
-        // Update the player's ground level based on the terrain
-        player->ground_level = terrain_height;
+        // Update position based on velocity
+        float new_x = player->position_x + player->velocity_x * delta_time;
+        float new_z = player->position_z + player->velocity_z * delta_time;
+        
+        // Check for collision with the fence wall (using the player's radius as collision buffer)
+        float player_radius = 0.4f; // Approximate player collision radius
+        if (!checkWallCollision(new_x, new_z, player_radius)) {
+            // No collision with wall, update position
+            player->position_x = new_x;
+            player->position_z = new_z;
+        } else {
+            // Collision detected, don't update position (or apply sliding if desired)
+            // This is a simple approach that just stops the player
+            // A more sophisticated approach would apply sliding along the wall
+            // We'll keep the previous position
+        }
+        
+        // Update Y position based on jumping state
+        if (player->is_jumping) {
+            player->velocity_y -= player->gravity * delta_time;
+            player->position_y += player->velocity_y * delta_time;
+            
+            // Check if we've landed
+            if (player->position_y <= terrain_height + player->height * 0.5f) {
+                player->position_y = terrain_height + player->height * 0.5f;
+                player->velocity_y = 0.0f;
+                player->is_jumping = false;
+            }
+        } else {
+            // Not jumping, get terrain height at the new position
+            float new_terrain_height = getHeightAtPoint((Terrain*)player->terrain, 
+                                               player->position_x, player->position_z);
+                                               
+            // Update the player's ground level based on the terrain
+            player->ground_level = terrain_height;
+        }
     }
     
     // Apply gravity if not on ground
