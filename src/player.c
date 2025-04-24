@@ -131,7 +131,7 @@ void initPlayer(Player *player, AudioSystem* audio) {
     player->audio = audio;
     
     // Physics properties - use values from config.h
-    player->height = 2.0f;
+    player->height = PLAYER_HEIGHT;
     player->eye_height = PLAYER_EYE_HEIGHT;
     player->ground_level = 0.0f; // Will be updated based on terrain
     player->movement_speed = PLAYER_MOVEMENT_SPEED;
@@ -154,6 +154,9 @@ void initPlayer(Player *player, AudioSystem* audio) {
 
 // Update player state based on time
 void updatePlayer(Player *player, float delta_time) {
+    // Define player_radius at the top of the function
+    float player_radius = PLAYER_RADIUS;
+    
     // If we have a valid terrain reference, get the current ground height at player position
     if (player->terrain) {
         // Get the terrain height at the player's current position
@@ -163,17 +166,18 @@ void updatePlayer(Player *player, float delta_time) {
         float new_x = player->position_x + player->velocity_x * delta_time;
         float new_z = player->position_z + player->velocity_z * delta_time;
         
-        // Check for collision with the fence wall (using the player's radius as collision buffer)
-        float player_radius = 0.4f; // Approximate player collision radius
+        // Check for collision with the fence wall
         if (!checkWallCollision(new_x, new_z, player_radius)) {
             // No collision with wall, update position
             player->position_x = new_x;
             player->position_z = new_z;
         } else {
-            // Collision detected, don't update position (or apply sliding if desired)
-            // This is a simple approach that just stops the player
-            // A more sophisticated approach would apply sliding along the wall
-            // We'll keep the previous position
+            // Collision detected, stop all horizontal movement
+            player->velocity_x = 0.0f;
+            player->velocity_z = 0.0f;
+            
+            // Log collision for debugging
+            log_info("Wall collision detected: position (%.2f, %.2f)", player->position_x, player->position_z);
         }
         
         // Update Y position based on jumping state
@@ -211,10 +215,8 @@ void updatePlayer(Player *player, float delta_time) {
     float prev_x = player->position_x;
     float prev_z = player->position_z;
     
-    // Apply velocity to position
-    player->position_x += player->velocity_x * delta_time;
+    // Only apply velocity to Y position (vertical movement)
     player->position_y += player->velocity_y * delta_time;
-    player->position_z += player->velocity_z * delta_time;
     
     // If the player moved horizontally and is on the ground, adjust height to follow terrain
     if ((prev_x != player->position_x || prev_z != player->position_z) && 
@@ -227,8 +229,8 @@ void updatePlayer(Player *player, float delta_time) {
         // Calculate height difference
         float height_diff = new_terrain_height - player->ground_level;
         
-        // If the slope is too steep (more than 45 degrees), limit movement
-        const float MAX_SLOPE_CHANGE = 0.75f;  // Maximum height change per movement step
+        // If the slope is too steep, limit movement
+        const float MAX_SLOPE_CHANGE = PLAYER_MAX_SLOPE_CHANGE;
         
         if (fabsf(height_diff) > MAX_SLOPE_CHANGE) {
             // Slope is too steep, reduce horizontal movement
@@ -252,9 +254,22 @@ void updatePlayer(Player *player, float delta_time) {
         }
     }
     
+    // Make sure we're not out of bounds due to any movement
+    if (player->terrain) {
+        // Check if current position is beyond the wall boundary
+        if (checkWallCollision(player->position_x, player->position_z, player_radius)) {
+            // If somehow we got out of bounds, reset position to previous position
+            player->position_x = prev_x;
+            player->position_z = prev_z;
+            player->velocity_x = 0.0f;
+            player->velocity_z = 0.0f;
+            log_info("Out of bounds correction applied");
+        }
+    }
+    
     // Dampen horizontal velocity (friction)
-    player->velocity_x *= 0.9f;
-    player->velocity_z *= 0.9f;
+    player->velocity_x *= PLAYER_FRICTION;
+    player->velocity_z *= PLAYER_FRICTION;
     
     // Clamp pitch to respect PLAYER_MAXIMUM_VERTICAL_ROT from config.h
     float half_angle = PLAYER_MAXIMUM_VERTICAL_ROT / 2.0f;
@@ -283,18 +298,19 @@ void renderWeapon(Player *player) {
     glBindTexture(GL_TEXTURE_2D, player->weapon_texture_id);
     
     // Position the weapon texture in view
-    glTranslatef(0.5f, -0.4f, -1.0f);
+    glTranslatef(PLAYER_WEAPON_POSITION_X, PLAYER_WEAPON_POSITION_Y, PLAYER_WEAPON_POSITION_Z);
     
     // Apply a slight rotation to match the player's view
-    glRotatef(-5.0f, 0.0f, 0.0f, 1.0f);
-    glRotatef(5.0f, 0.0f, 1.0f, 0.0f);
+    glRotatef(PLAYER_WEAPON_ROTATION_X, 0.0f, 0.0f, 1.0f);
+    glRotatef(PLAYER_WEAPON_ROTATION_Y, 0.0f, 1.0f, 0.0f);
     
     // Draw a textured quad for the weapon
+    float size = PLAYER_WEAPON_SIZE;
     glBegin(GL_QUADS);
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(-0.5f, -0.5f, 0.0f);  // Bottom left
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.5f, -0.5f, 0.0f);   // Bottom right
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.5f, 0.5f, 0.0f);    // Top right
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(-0.5f, 0.5f, 0.0f);   // Top left
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(-size, -size, 0.0f);  // Bottom left
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(size, -size, 0.0f);   // Bottom right
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(size, size, 0.0f);    // Top right
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(-size, size, 0.0f);   // Top left
     glEnd();
     
     // Restore previous state

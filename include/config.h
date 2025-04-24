@@ -138,6 +138,18 @@
 #define PLAYER_MOVEMENT_SPEED 5.0f
 #define PLAYER_JUMP_VELOCITY 5.0f
 #define PLAYER_GRAVITY 9.8f
+#define PLAYER_HEIGHT 2.0f       // Player's full height
+#define PLAYER_RADIUS 0.4f       // Player collision radius for wall detection
+#define PLAYER_FRICTION 0.9f     // Friction coefficient for player movement (0.9f = 10% slowdown per frame)
+#define PLAYER_MAX_SLOPE_CHANGE 0.75f // Maximum terrain slope the player can climb
+
+// Weapon display settings
+#define PLAYER_WEAPON_POSITION_X 0.5f     // X position of weapon in view
+#define PLAYER_WEAPON_POSITION_Y -0.4f    // Y position of weapon in view
+#define PLAYER_WEAPON_POSITION_Z -1.0f    // Z position (distance from camera)
+#define PLAYER_WEAPON_ROTATION_X -5.0f    // X rotation of weapon
+#define PLAYER_WEAPON_ROTATION_Y 5.0f     // Y rotation of weapon
+#define PLAYER_WEAPON_SIZE 0.5f           // Size of weapon quad
 
 // Weapon settings
 #define PLAYER_WEAPON_TEXTURE_BASE "textures/weapons/weapon0_"
