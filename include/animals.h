@@ -67,4 +67,8 @@ void updateAnimals(float delta_time);
 void renderAnimals(float camera_x, float camera_z);
 void cleanupAnimals(void);
 
+// Functions to access animal data from other modules
+Animal* getAnimalsArray(void);
+int getAnimalCount(void);
+
 #endif // ANIMALS_H

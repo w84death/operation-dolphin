@@ -31,11 +31,28 @@ void toggleMapView(MapView* map_view) {
 
 // Render the map and its elements
 void renderMapView(MapView* map_view, Player* player, Wall* wall, 
-                  StaticElement* static_elements, int static_element_count,
-                  Animal* animals, int animal_count) {
+                 StaticElement* static_elements, int static_element_count, 
+                 Animal* animals, int animal_count) {
     if (!map_view->active) {
         return; // Don't render if not active
     }
+    
+    // Debug logging to check what we're trying to render
+    logInfo("Map rendering - Animal count: %d, Static element count: %d", animal_count, static_element_count);
+
+    // Count active entities
+    int active_animals = 0;
+    int active_elements = 0;
+    
+    for (int i = 0; i < animal_count; i++) {
+        if (animals[i].active) active_animals++;
+    }
+    
+    for (int i = 0; i < static_element_count; i++) {
+        if (static_elements[i].active) active_elements++;
+    }
+    
+    logInfo("Map rendering - Active animals: %d, Active static elements: %d", active_animals, active_elements);
     
     // Save current matrices and set up orthographic projection for 2D rendering
     glMatrixMode(GL_PROJECTION);
@@ -71,7 +88,7 @@ void renderMapView(MapView* map_view, Player* player, Wall* wall,
     // Draw walls/boundaries using the terrain size
     if (wall) {
         glDisable(GL_TEXTURE_2D);
-        glColor4f(0.9f, 0.9f, 0.9f, 1.0f); // Brighter walls for better visibility
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // White walls for better visibility
         glLineWidth(3.0f); // Thicker lines for walls
         
         // Calculate wall dimensions based on terrain size and inset
@@ -106,9 +123,8 @@ void renderMapView(MapView* map_view, Player* player, Wall* wall,
         glLineWidth(1.0f); // Reset line width
     }
     
-    // Draw static elements (infrastructure)
+    // Draw static elements as white triangles
     glDisable(GL_TEXTURE_2D);
-    glColor4f(0.7f, 0.7f, 0.7f, 0.95f); // Brighter gray for static elements
     
     for (int i = 0; i < static_element_count; i++) {
         StaticElement* element = &static_elements[i];
@@ -117,19 +133,29 @@ void renderMapView(MapView* map_view, Player* player, Wall* wall,
         
         float map_x = center_x + (element->x - player->position_x) * map_scale;
         float map_y = center_y + (element->z - player->position_z) * map_scale;
+        float triangle_size = 12.0f;  // Size of triangles for static elements
         
-        // Draw a square for each static element
-        glBegin(GL_QUADS);
-        glVertex2f(map_x - 8, map_y - 8);  // Larger squares
-        glVertex2f(map_x + 8, map_y - 8);
-        glVertex2f(map_x + 8, map_y + 8);
-        glVertex2f(map_x - 8, map_y + 8);
+        // All elements are white now
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        
+        // Draw a triangle for each static element (pointing upward)
+        glBegin(GL_TRIANGLES);
+        glVertex2f(map_x, map_y - triangle_size);  // Bottom left
+        glVertex2f(map_x + triangle_size, map_y - triangle_size);  // Bottom right
+        glVertex2f(map_x + triangle_size/2, map_y);  // Top
+        glEnd();
+        
+        // Draw outline for better visibility
+        glLineWidth(1.5f);
+        glColor4f(0.3f, 0.3f, 0.3f, 1.0f);  // Dark outline
+        glBegin(GL_LINE_LOOP);
+        glVertex2f(map_x, map_y - triangle_size);
+        glVertex2f(map_x + triangle_size, map_y - triangle_size);
+        glVertex2f(map_x + triangle_size/2, map_y);
         glEnd();
     }
     
-    // Draw animals as bright green dots (much more visible now)
-    glColor4f(MAP_ANIMAL_COLOR_R, MAP_ANIMAL_COLOR_G, MAP_ANIMAL_COLOR_B, MAP_ANIMAL_COLOR_A);
-    
+    // Draw animals as white circles
     for (int i = 0; i < animal_count; i++) {
         Animal* animal = &animals[i];
         
@@ -139,55 +165,105 @@ void renderMapView(MapView* map_view, Player* player, Wall* wall,
         float map_x = center_x + (animal->x - player->position_x) * map_scale;
         float map_y = center_y + (animal->z - player->position_z) * map_scale;
         
-        // Draw a circle for each animal
-        const int segments = 14;  // More segments for smoother circles
+        // All animals are white now
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         
+        // Draw a circle for each animal
+        const int segments = 14;
+        float circle_size = MAP_ANIMAL_DOT_SIZE * 4.0f; // Make circles more visible
+        
+        // Fill circle
         glBegin(GL_TRIANGLE_FAN);
         glVertex2f(map_x, map_y); // Center of circle
         
         for (int j = 0; j <= segments; j++) {
             float angle = 2.0f * M_PI * j / segments;
-            float x = map_x + cos(angle) * MAP_ANIMAL_DOT_SIZE;
-            float y = map_y + sin(angle) * MAP_ANIMAL_DOT_SIZE;
+            float x = map_x + cos(angle) * circle_size;
+            float y = map_y + sin(angle) * circle_size;
+            glVertex2f(x, y);
+        }
+        glEnd();
+        
+        // Draw outline for better visibility
+        glLineWidth(1.5f);
+        glColor4f(0.3f, 0.3f, 0.3f, 0.9f);  // Dark outline
+        glBegin(GL_LINE_LOOP);
+        for (int j = 0; j < segments; j++) {
+            float angle = 2.0f * M_PI * j / segments;
+            float x = map_x + cos(angle) * circle_size;
+            float y = map_y + sin(angle) * circle_size;
             glVertex2f(x, y);
         }
         glEnd();
     }
     
-    // Draw player position (always at center)
-    glColor4f(1.0f, 0.0f, 0.0f, 1.0f); // Red for player
+    // Draw player position as a white dot with direction indicator
+    float player_map_x = center_x;
+    float player_map_y = center_y;
     
-    // Draw player as a circle with direction indicator
-    const float player_size = 10.0f;  // Larger player marker
-    const int segments = 16;
+    // White color for player position
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     
-    glBegin(GL_TRIANGLE_FAN);
-    glVertex2f(center_x, center_y); // Center of circle
-    
-    for (int i = 0; i <= segments; i++) {
-        float angle = 2.0f * M_PI * i / segments;
-        float x = center_x + cos(angle) * player_size;
-        float y = center_y + sin(angle) * player_size;
-        glVertex2f(x, y);
-    }
+    // Draw player position dot
+    float player_dot_size = 6.0f;
+    glPointSize(player_dot_size);
+    glBegin(GL_POINTS);
+    glVertex2f(player_map_x, player_map_y);
     glEnd();
     
-    // Direction indicator (shows where player is facing)
-    // FIX: Correct the angle calculation - in Operation Dolphin, yaw is in degrees and 0 is looking along -Z axis
-    // We need to convert from game coordinates to screen coordinates
-    // Game: yaw 0 = -Z, increases clockwise
-    // Screen: 0 = right (+X), increases clockwise
-    float yawRadians = (player->yaw - 90.0f) * M_PI / 180.0f;  // -90 degrees to align with screen coordinates
+    // Draw direction indicator line
+    float direction_line_length = 15.0f;
+    float dx = sinf(player->yaw * M_PI / 180.0f) * direction_line_length;
+    float dz = cosf(player->yaw * M_PI / 180.0f) * direction_line_length;
     
-    glColor4f(1.0f, 1.0f, 0.0f, 1.0f); // Yellow for direction
-    glLineWidth(4.0f);  // Make the direction line thicker for visibility
+    glLineWidth(2.0f);
     glBegin(GL_LINES);
-    glVertex2f(center_x, center_y);
-    float dir_x = center_x + cos(yawRadians) * player_size * 3.0f;  // Longer direction indicator
-    float dir_y = center_y + sin(yawRadians) * player_size * 3.0f;
-    glVertex2f(dir_x, dir_y);
+    glVertex2f(player_map_x, player_map_y);
+    glVertex2f(player_map_x + dx, player_map_y - dz); // Note: Z is flipped for Y in 2D
     glEnd();
-    glLineWidth(1.0f);  // Reset line width
+    glLineWidth(1.0f);
+    
+    // Draw static elements as white dots with proper size
+    if (static_elements != NULL) {
+        // All elements are white
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        
+        // Draw each active static element as a dot
+        for (int i = 0; i < static_element_count; i++) {
+            if (static_elements[i].active) {
+                // Calculate map position relative to player
+                float map_x = center_x + (static_elements[i].x - player->position_x) * map_scale;
+                float map_y = center_y + (static_elements[i].z - player->position_z) * map_scale;
+                
+                // Draw element dot with proper size
+                glPointSize(MAP_STATIC_ELEMENT_DOT_SIZE * 6.0f); // Properly scaled
+                glBegin(GL_POINTS);
+                glVertex2f(map_x, map_y);
+                glEnd();
+            }
+        }
+    }
+    
+    // Draw animals as white dots
+    if (animals != NULL) {
+        // All animals are white
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        
+        // Draw each active animal as a dot
+        for (int i = 0; i < animal_count; i++) {
+            if (animals[i].active) {
+                // Calculate map position relative to player
+                float map_x = center_x + (animals[i].x - player->position_x) * map_scale;
+                float map_y = center_y + (animals[i].z - player->position_z) * map_scale;
+                
+                // Draw animal dot
+                glPointSize(MAP_ANIMAL_DOT_SIZE * 5.0f);
+                glBegin(GL_POINTS);
+                glVertex2f(map_x, map_y);
+                glEnd();
+            }
+        }
+    }
     
     // Reset state
     glDisable(GL_BLEND);

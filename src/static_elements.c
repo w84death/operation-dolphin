@@ -504,3 +504,15 @@ void spawnItemsAroundStaticElements(void) {
     
     log_success("Spawned a total of %d items around static elements", total_items_spawned);
 }
+
+// Add accessor functions to expose the static elements array and count
+
+// Return a pointer to the static elements array for map drawing
+StaticElement* getStaticElementsArray(void) {
+    return static_elements;
+}
+
+// Return the current number of static elements
+int getStaticElementCount(void) {
+    return static_element_count;
+}

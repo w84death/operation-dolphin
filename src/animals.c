@@ -430,6 +430,16 @@ void cleanupAnimals(void) {
     animal_capacity = 0;
 }
 
+// Return a pointer to the animals array for map drawing
+Animal* getAnimalsArray(void) {
+    return animals;
+}
+
+// Return the current number of animals
+int getAnimalCount(void) {
+    return animal_count;
+}
+
 // Update animal movement and state
 void updateAnimals(float delta_time) {
     // Need access to terrain for height calculations

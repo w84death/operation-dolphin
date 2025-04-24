@@ -72,4 +72,8 @@ void cleanupStaticElements(void);
 // New function to spawn items around static elements
 void spawnItemsAroundStaticElements(void);
 
+// Add functions to access static element data from other modules
+StaticElement* getStaticElementsArray(void);
+int getStaticElementCount(void);
+
 #endif // STATIC_ELEMENTS_H

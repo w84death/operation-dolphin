@@ -439,8 +439,18 @@ void resetGame(GameState* game) {
     // Create animals on the terrain (using the same seed as vegetation)
     createAnimals(50, TERRAIN_TILE_SIZE);
     
+    // Store the reference to animals in game state
+    game->animals = getAnimalsArray();
+    game->animal_count = getAnimalCount();
+    logInfo("Game state now tracking %d animals", game->animal_count);
+    
     // Create static elements on the terrain (using the same seed as vegetation)
     createStaticElements(15, TERRAIN_TILE_SIZE); // Create 15 static elements
+    
+    // Store the reference to static elements in game state
+    game->static_elements = getStaticElementsArray();
+    game->static_element_count = getStaticElementCount();
+    logInfo("Game state now tracking %d static elements", game->static_element_count);
     
     // Spawn items around static elements to create points of interest
     spawnItemsAroundStaticElements();
