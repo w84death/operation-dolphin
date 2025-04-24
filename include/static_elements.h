@@ -65,7 +65,7 @@ static const StaticElementType STATIC_ELEMENT_TYPES[] = {
 void setStaticElementGameStatePointer(void* game_ptr);
 bool loadStaticElementTextures(void);
 void createStaticElements(int count, float terrain_size);
-void createStaticElementsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed);
+void createStaticElementsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed, int count);
 void renderStaticElements(float camera_x, float camera_z);
 void cleanupStaticElements(void);
 

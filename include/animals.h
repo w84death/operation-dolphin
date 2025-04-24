@@ -63,6 +63,7 @@ struct Animal {
 void setAnimalGameStatePointer(void* game_ptr);
 bool loadAnimalTextures(void);
 void createAnimals(int count, float terrain_size);
+void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed, int count);
 void updateAnimals(float delta_time);
 void renderAnimals(float camera_x, float camera_z);
 void cleanupAnimals(void);

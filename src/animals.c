@@ -101,13 +101,13 @@ bool loadAnimalTextures() {
     return successful_species > 0;
 }
 
-// Function to ensure we have enough capacity for animals
+// Ensure the animal array has enough capacity
 static void ensureAnimalCapacity(int required_capacity) {
     if (animal_capacity >= required_capacity) {
-        return; // We already have enough capacity
+        return; // Already have enough capacity
     }
     
-    // Calculate new capacity (double current or minimum required)
+    // Calculate new capacity (double the current size, or at least the required capacity)
     int new_capacity = animal_capacity == 0 ? 
                        required_capacity : 
                        animal_capacity * 2;
@@ -146,13 +146,54 @@ void createAnimals(int count, float terrain_size) {
     // Set random seed
     srand(seed);
     
-    // Make sure we have enough capacity
-    ensureAnimalCapacity(count);
+    // Calculate the number of chunks in each dimension
+    int chunks_per_side = TERRAIN_TILES_COUNT;
+    float chunk_size = terrain_size;
     
-    // Calculate world position
-    float half_size = terrain_size / 2.0f;
-    float terrain_offset_x = TERRAIN_POSITION_X;
-    float terrain_offset_z = TERRAIN_POSITION_Z;
+    // Distribute animals evenly across all chunks
+    int animals_per_chunk = count / (chunks_per_side * chunks_per_side);
+    int remaining_animals = count % (chunks_per_side * chunks_per_side);
+    
+    logInfo("Creating animals across %dx%d chunks, ~%d per chunk", 
+           chunks_per_side, chunks_per_side, animals_per_chunk);
+    
+    // Create animals for each chunk
+    for (int z = 0; z < chunks_per_side; z++) {
+        for (int x = 0; x < chunks_per_side; x++) {
+            // Calculate how many animals to place in this chunk
+            int chunk_animal_count = animals_per_chunk;
+            
+            // Distribute any remaining animals to the first chunks
+            if (remaining_animals > 0) {
+                chunk_animal_count++;
+                remaining_animals--;
+            }
+            
+            // Create animals for this chunk
+            createAnimalsForChunk(x - chunks_per_side/2, z - chunks_per_side/2, 
+                               chunk_size, seed, chunk_animal_count);
+        }
+    }
+    
+    logInfo("Created a total of %d animals across %d chunks", animal_count, 
+           chunks_per_side * chunks_per_side);
+}
+
+// Create animals for a specific chunk
+void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed, int count) {
+    if (count <= 0) return;
+    
+    // Initialize random seed for this chunk
+    unsigned int chunk_seed = seed + (unsigned int)((chunk_x * 73856093) ^ (chunk_z * 19349663));
+    srand(chunk_seed);
+    
+    // Make sure we have enough capacity
+    ensureAnimalCapacity(animal_count + count);
+    
+    // Calculate world position for this chunk
+    float half_size = chunk_size / 2.0f;
+    float chunk_offset_x = chunk_x * chunk_size;
+    float chunk_offset_z = chunk_z * chunk_size;
     float ground_level = TERRAIN_POSITION_Y;
     
     // Count how many animal species have their textures loaded
@@ -169,8 +210,11 @@ void createAnimals(int count, float terrain_size) {
         return;
     }
     
-    // Create animals
-    for (int i = 0; i < count && i < animal_capacity; i++) {
+    // Create animals for this chunk
+    for (int i = 0; i < count; i++) {
+        int current_index = animal_count;
+        if (current_index >= animal_capacity) break;
+        
         // Select a random species from the ones with loaded textures
         int species_offset = rand() % available_species_count;
         int species_index = -1;
@@ -190,86 +234,56 @@ void createAnimals(int count, float terrain_size) {
         if (species_index < 0) continue;
         
         // Store the species index
-        animals[i].species_index = species_index;
+        animals[current_index].species_index = species_index;
         const AnimalSpecies* species = &ANIMAL_SPECIES[species_index];
         
-        // For debugging purposes, place animals in a grid pattern near origin
-        // This makes them easier to find during testing
-        if (i < 10) {
-            // Place first 10 animals in a line at Z=0, starting at X=-10 with 2m spacing
-            animals[i].x = -10.0f + (i * 2.0f);
-            animals[i].z = 0.0f;
-        } else if (i < 20) {
-            // Place next 10 animals in a line at Z=5, starting at X=-10 with 2m spacing
-            animals[i].x = -10.0f + ((i-10) * 2.0f);
-            animals[i].z = 5.0f;
-        } else {
-            // Place remaining animals randomly
-            animals[i].x = ((float)rand() / RAND_MAX) * terrain_size - half_size + terrain_offset_x;
-            animals[i].z = ((float)rand() / RAND_MAX) * terrain_size - half_size + terrain_offset_z;
-        }
+        // Place animals randomly within this chunk
+        animals[current_index].x = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_x;
+        animals[current_index].z = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_z;
         
-        // Initialize movement parameters
-        animals[i].rotation = ((float)rand() / RAND_MAX) * 360.0f;
-        animals[i].direction = animals[i].rotation; // Initial movement direction matches rotation
-        animals[i].velocity = 0.0f; // Start idle
-        animals[i].state = ANIMAL_IDLE;
+        // Set dimensions based on species
+        animals[current_index].width = species->width;
+        animals[current_index].height = species->height;
         
-        // Set random state timer for first state transition
-        animals[i].state_timer = ANIMAL_MIN_IDLE_TIME + 
-                                ((float)rand() / RAND_MAX) * (ANIMAL_MAX_IDLE_TIME - ANIMAL_MIN_IDLE_TIME);
+        // Random initial rotation and direction
+        animals[current_index].rotation = ((float)rand() / RAND_MAX) * 360.0f;
+        animals[current_index].direction = animals[current_index].rotation;
         
-        // Set maximum velocity based on animal species
-        animals[i].max_velocity = species->speed;
+        // Position on ground level with small offset to avoid z-fighting
+        animals[current_index].y = ground_level + 0.1f;
         
-        // Set dimensions based on animal species with some small random variation (+/- 10%)
-        float scale_variation = 0.9f + ((float)rand() / RAND_MAX) * 0.2f;  // 0.9 to 1.1
-        animals[i].width = species->width * scale_variation;
-        animals[i].height = species->height * scale_variation;
+        // Set initial state and movement parameters
+        animals[current_index].state = ANIMAL_IDLE;
+        animals[current_index].state_timer = ANIMAL_MIN_IDLE_TIME + 
+                                    ((float)rand() / RAND_MAX) * 
+                                    (ANIMAL_MAX_IDLE_TIME - ANIMAL_MIN_IDLE_TIME);
+        animals[current_index].velocity = 0.0f;
+        animals[current_index].max_velocity = species->speed * (0.8f + ((float)rand() / RAND_MAX) * 0.4f);
         
-        // Initialize flying animal parameters if applicable
+        // Handle flying animals
         if (species->behavior == ANIMAL_FLYING) {
-            // Set random flight height within range
-            animals[i].flight_height = FLYING_MIN_HEIGHT + 
-                                     ((float)rand() / RAND_MAX) * (FLYING_MAX_HEIGHT - FLYING_MIN_HEIGHT);
-            
-            // Set initial vertical velocity (some animals going up, some down)
-            animals[i].vertical_velocity = FLYING_VERTICAL_SPEED;
-            animals[i].ascending = (rand() % 2) == 0;  // 50% chance of ascending
-            
-            // Get terrain height at this position
-            float terrain_height = 0.0f;
-            if (game != NULL && game->terrain != NULL) {
-                terrain_height = getHeightAtPoint((Terrain*)game->terrain, animals[i].x, animals[i].z);
-            }
-            
-            // Position flying animals at their flight height above terrain
-            animals[i].y = terrain_height + animals[i].flight_height;
-        } else {
-            // Position on ground level with small offset to avoid z-fighting
-            animals[i].y = ground_level + 0.05f;
-            
-            // Initialize flying fields with zeros for ground animals
-            animals[i].flight_height = 0.0f;
-            animals[i].vertical_velocity = 0.0f;
-            animals[i].ascending = false;
+            animals[current_index].flight_height = FLYING_MIN_HEIGHT + 
+                                         ((float)rand() / RAND_MAX) * 
+                                         (FLYING_MAX_HEIGHT - FLYING_MIN_HEIGHT);
+            animals[current_index].y += animals[current_index].flight_height;
+            animals[current_index].vertical_velocity = 0.0f;
+            animals[current_index].ascending = ((float)rand() / RAND_MAX) > 0.5f;
         }
         
-        // Chunk coordinates (for future use with chunks)
-        animals[i].chunk_x = 0;
-        animals[i].chunk_z = 0;
+        // Store chunk coordinates
+        animals[current_index].chunk_x = chunk_x;
+        animals[current_index].chunk_z = chunk_z;
         
         // Activate the animal
-        animals[i].active = true;
+        animals[current_index].active = true;
         
+        // Increment animal count
         animal_count++;
         
-        logInfo("Created animal %d: type=%s, position=(%.2f, %.2f, %.2f), size=%.2fx%.2f, speed=%.2f, behavior=%d", 
-                i, species->name, animals[i].x, animals[i].y, animals[i].z, 
-                animals[i].width, animals[i].height, species->speed, species->behavior);
+        logInfo("Created animal in chunk (%d,%d): type=%s, position=(%.2f, %.2f, %.2f)", 
+                chunk_x, chunk_z, species->name, animals[current_index].x, 
+                animals[current_index].y, animals[current_index].z);
     }
-    
-    logInfo("Created %d animals on the terrain", animal_count);
 }
 
 // Draw a billboard that always faces the camera

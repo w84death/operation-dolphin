@@ -145,12 +145,12 @@ static void ensureStaticElementCapacity(int required_capacity) {
 
 // Create static elements on the terrain
 void createStaticElements(int count, float terrain_size) {
-    // If count is zero, do nothing
-    if (count <= 0) return;
+    // Free previous static elements if any
+    cleanupStaticElements();
     
-    // Use game state for seed if available, otherwise use timestamp
-    unsigned int seed = time(NULL);
+    // Get the game state to access the seed
     GameState* game = (GameState*)game_state_ptr;
+    unsigned int seed = time(NULL);
     
     if (game != NULL) {
         seed = game->settings.foliage_seed;
@@ -160,13 +160,79 @@ void createStaticElements(int count, float terrain_size) {
     // Set random seed
     srand(seed);
     
-    // Make sure we have enough capacity
-    ensureStaticElementCapacity(count);
+    // Calculate the number of chunks in each dimension
+    int chunks_per_side = TERRAIN_TILES_COUNT;
+    float chunk_size = terrain_size;
     
-    // Calculate world position
-    float half_size = terrain_size * TERRAIN_TILES_COUNT / 2.0f;
-    float terrain_offset_x = TERRAIN_POSITION_X;
-    float terrain_offset_z = TERRAIN_POSITION_Z;
+    // Center chunk coordinates
+    int center_x = 0;
+    int center_z = 0;
+    
+    // Reserve 70% of static elements for the center chunk
+    int center_chunk_elements = (int)(count * 0.7f);
+    int remaining_elements = count - center_chunk_elements;
+    
+    logInfo("Creating static elements with focus on center: %d in center, %d spread around", 
+           center_chunk_elements, remaining_elements);
+    
+    // Create elements for the center chunk first
+    createStaticElementsForChunk(center_x, center_z, 
+                               chunk_size, seed, center_chunk_elements);
+    
+    // Distribute remaining elements to the inner surrounding chunks (not the outer ones)
+    if (remaining_elements > 0) {
+        // Define a small radius around center (1 chunk away in each direction)
+        int inner_radius = 1;
+        
+        // Count how many inner chunks we have (excluding center which is already populated)
+        int inner_chunk_count = (2*inner_radius + 1) * (2*inner_radius + 1) - 1; // -1 for center
+        
+        // Elements per inner chunk
+        int elements_per_inner_chunk = remaining_elements / inner_chunk_count;
+        int extra_elements = remaining_elements % inner_chunk_count;
+        
+        // Create static elements for inner chunks (those near the center)
+        int chunks_processed = 0;
+        for (int z = -inner_radius; z <= inner_radius; z++) {
+            for (int x = -inner_radius; x <= inner_radius; x++) {
+                // Skip the center chunk as we've already populated it
+                if (x == center_x && z == center_z) continue;
+                
+                // Calculate how many elements to place in this chunk
+                int chunk_element_count = elements_per_inner_chunk;
+                
+                // Distribute any remaining elements 
+                if (extra_elements > 0) {
+                    chunk_element_count++;
+                    extra_elements--;
+                }
+                
+                // Create static elements for this chunk
+                createStaticElementsForChunk(x, z, chunk_size, seed, chunk_element_count);
+                chunks_processed++;
+            }
+        }
+    }
+    
+    logInfo("Created a total of %d static elements focused in central region", static_element_count);
+}
+
+// Create static elements for a specific chunk
+void createStaticElementsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed, int count) {
+    // If count is zero, do nothing
+    if (count <= 0) return;
+    
+    // Initialize random seed for this chunk
+    unsigned int chunk_seed = seed + (unsigned int)((chunk_x * 73856093) ^ (chunk_z * 19349663));
+    srand(chunk_seed);
+    
+    // Make sure we have enough capacity
+    ensureStaticElementCapacity(static_element_count + count);
+    
+    // Calculate world position for this chunk
+    float half_size = chunk_size / 2.0f;
+    float chunk_offset_x = chunk_x * chunk_size;
+    float chunk_offset_z = chunk_z * chunk_size;
     float ground_level = TERRAIN_POSITION_Y;
     
     // Count how many static element types have their textures loaded
@@ -183,11 +249,12 @@ void createStaticElements(int count, float terrain_size) {
         return;
     }
     
-    // Clear existing static elements
-    static_element_count = 0;
-    
-    // Create static elements
-    for (int i = 0; i < count && i < static_element_capacity; i++) {
+    // Create static elements for this chunk
+    int elements_created = 0;
+    for (int i = 0; i < count; i++) {
+        int current_index = static_element_count;
+        if (current_index >= static_element_capacity) break;
+        
         // Select a random type from the ones with loaded textures
         int type_offset = rand() % available_types_count;
         int type_index = -1;
@@ -207,45 +274,44 @@ void createStaticElements(int count, float terrain_size) {
         if (type_index < 0) continue;
         
         // Store the type index
-        static_elements[i].type_index = type_index;
+        static_elements[current_index].type_index = type_index;
         const StaticElementType* element_type = &STATIC_ELEMENT_TYPES[type_index];
         
-        // Place elements randomly on the terrain
-        static_elements[i].x = ((float)rand() / RAND_MAX) * terrain_size - half_size + terrain_offset_x;
-        static_elements[i].z = ((float)rand() / RAND_MAX) * terrain_size - half_size + terrain_offset_z;
+        // Place elements randomly within this chunk
+        static_elements[current_index].x = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_x;
+        static_elements[current_index].z = ((float)rand() / RAND_MAX) * chunk_size - half_size + chunk_offset_z;
         
         // Fixed rotation for static element (random rotation for variety)
-        static_elements[i].rotation = ((float)rand() / RAND_MAX) * 360.0f;
+        static_elements[current_index].rotation = ((float)rand() / RAND_MAX) * 360.0f;
         
         // Set dimensions based on element type with some small random variation (+/- 10%)
         float scale_variation = 0.9f + ((float)rand() / RAND_MAX) * 0.2f;  // 0.9 to 1.1
-        static_elements[i].width = element_type->width * scale_variation;
-        static_elements[i].height = element_type->height * scale_variation;
+        static_elements[current_index].width = element_type->width * scale_variation;
+        static_elements[current_index].height = element_type->height * scale_variation;
         
         // Position on ground level with small offset to avoid z-fighting
-        static_elements[i].y = ground_level + 0.05f;
+        static_elements[current_index].y = ground_level + 0.05f;
         
-        // Chunk coordinates (for future use with chunks)
-        static_elements[i].chunk_x = 0;
-        static_elements[i].chunk_z = 0;
+        // Store chunk coordinates 
+        static_elements[current_index].chunk_x = chunk_x;
+        static_elements[current_index].chunk_z = chunk_z;
+        
+        // Initialize the items_spawned flag
+        static_elements[current_index].items_spawned = false;
         
         // Activate the static element
-        static_elements[i].active = true;
+        static_elements[current_index].active = true;
         
+        // Increment counters
         static_element_count++;
+        elements_created++;
         
-        logInfo("Created static element %d: type=%s, position=(%.2f, %.2f, %.2f), size=%.2fx%.2f", 
-                i, element_type->name, static_elements[i].x, static_elements[i].y, static_elements[i].z, 
-                static_elements[i].width, static_elements[i].height);
+        logInfo("Created static element in chunk (%d,%d): type=%s, position=(%.2f, %.2f, %.2f)", 
+                chunk_x, chunk_z, element_type->name, static_elements[current_index].x, 
+                static_elements[current_index].y, static_elements[current_index].z);
     }
     
-    logInfo("Created %d static elements on the terrain", static_element_count);
-}
-
-// Create static elements for a specific chunk
-void createStaticElementsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed) {
-    // Not implemented yet - will be similar to vegetation chunk system
-    // This will be useful for procedural terrain generation
+    logInfo("Created %d static elements in chunk (%d,%d)", elements_created, chunk_x, chunk_z);
 }
 
 // Draw a billboard that always faces the camera
