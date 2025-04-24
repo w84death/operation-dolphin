@@ -157,14 +157,28 @@ void updatePlayer(Player *player, float delta_time) {
     // Define player_radius at the top of the function
     float player_radius = PLAYER_RADIUS;
     
+    // Store current position to check if the player moved
+    float prev_x = player->position_x;
+    float prev_z = player->position_z;
+    
     // If we have a valid terrain reference, get the current ground height at player position
     if (player->terrain) {
-        // Get the terrain height at the player's current position
-        float terrain_height = getHeightAtPoint((Terrain*)player->terrain, player->position_x, player->position_z);
+        // Only recalculate terrain height if the player is moving or jumping
+        float terrain_height;
+        if (player->velocity_x != 0.0f || player->velocity_z != 0.0f || player->is_jumping) {
+            terrain_height = getHeightAtPoint((Terrain*)player->terrain, player->position_x, player->position_z);
+        } else {
+            // Use the cached ground level if the player isn't moving
+            terrain_height = player->ground_level;
+        }
         
         // Update position based on velocity
         float new_x = player->position_x + player->velocity_x * delta_time;
         float new_z = player->position_z + player->velocity_z * delta_time;
+        
+        // Apply very small epsilon to avoid tiny vibrations in position
+        if (fabsf(player->velocity_x) < 0.001f) player->velocity_x = 0.0f;
+        if (fabsf(player->velocity_z) < 0.001f) player->velocity_z = 0.0f;
         
         // Check for collision with the fence wall - using the wall reference now
         if (!checkWallCollision(new_x, new_z, player_radius, player->wall)) {
@@ -192,12 +206,15 @@ void updatePlayer(Player *player, float delta_time) {
                 player->is_jumping = false;
             }
         } else {
-            // Not jumping, get terrain height at the new position
-            float new_terrain_height = getHeightAtPoint((Terrain*)player->terrain, 
-                                               player->position_x, player->position_z);
-                                               
-            // Update the player's ground level based on the terrain
-            player->ground_level = terrain_height;
+            // On ground, only update ground level if actually moving horizontally
+            if (player->velocity_x != 0.0f || player->velocity_z != 0.0f) {
+                // Not jumping, get terrain height at the new position
+                float new_terrain_height = getHeightAtPoint((Terrain*)player->terrain, 
+                                                player->position_x, player->position_z);
+                                                
+                // Update the player's ground level based on the terrain
+                player->ground_level = new_terrain_height;
+            }
         }
     }
     
@@ -207,13 +224,9 @@ void updatePlayer(Player *player, float delta_time) {
     } else {
         // On ground, stop falling and match the terrain height
         player->position_y = player->ground_level + player->height * 0.5f;
-        player->velocity_y = 0;
+        player->velocity_y = 0.0f;
         player->is_jumping = false;
     }
-    
-    // Store current position to check if the player moved
-    float prev_x = player->position_x;
-    float prev_z = player->position_z;
     
     // Only apply velocity to Y position (vertical movement)
     player->position_y += player->velocity_y * delta_time;

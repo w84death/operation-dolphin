@@ -170,9 +170,9 @@
 
 // Billboard vegetation settings
 #define TERRAIN_MAX_FEATURES 5000
-#define VEGETATION_DENSITY_SMALL 16.0f  // Multiplier for small vegetation
-#define VEGETATION_DENSITY_MEDIUM 4.0f  // Multiplier for medium vegetation
-#define VEGETATION_DENSITY_BIG 1.5f  // Multiplier for big vegetation
+#define VEGETATION_DENSITY_SMALL 8.0f  // Multiplier for small vegetation
+#define VEGETATION_DENSITY_MEDIUM 2.0f  // Multiplier for medium vegetation
+#define VEGETATION_DENSITY_BIG 0.75f  // Multiplier for big vegetation
 #define FOLIAGE_DEFAULT_SEED 8086    // Default seed for vegetation generation
 
 
@@ -239,7 +239,7 @@
 #define COMPASS_WEST "W"
 
 // Item settings
-#define MAX_ITEMS 16
+#define MAX_ITEMS 32
 #define ITEM_INTERACTION_RANGE 1.0f
 #define ITEM_SPAWN_MULTIPLIER 2.0f
 

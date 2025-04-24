@@ -470,6 +470,12 @@ void updateAnimals(float delta_time) {
                 animals[i].flight_height = FLYING_MIN_HEIGHT + 
                                          ((float)rand() / RAND_MAX) * 
                                          (FLYING_MAX_HEIGHT - FLYING_MIN_HEIGHT);
+                                         
+                // Also pick a new random direction when changing height
+                float random_turn = ((float)rand() / RAND_MAX) * 180.0f - 90.0f; // ±90 degrees
+                animals[i].direction += random_turn;
+                while (animals[i].direction < 0) animals[i].direction += 360.0f;
+                while (animals[i].direction >= 360.0f) animals[i].direction -= 360.0f;
             }
             
             // Calculate target height
@@ -497,16 +503,12 @@ void updateAnimals(float delta_time) {
                 }
             }
             
-            // Calculate movement in XZ plane
+            // Calculate movement in XZ plane - ensure they always move at least a minimum amount
             float rad_direction = animals[i].direction * M_PI / 180.0f;
             float dx = sinf(rad_direction) * animals[i].velocity * delta_time;
             float dz = cosf(rad_direction) * animals[i].velocity * delta_time;
             
-            // Store original position in case we need to revert
-            float original_x = animals[i].x;
-            float original_z = animals[i].z;
-            
-            // Update position
+            // Update position - ensure a minimum movement to prevent getting stuck
             animals[i].x += dx;
             animals[i].z += dz;
             
@@ -531,27 +533,20 @@ void updateAnimals(float delta_time) {
             float dist_z = animals[i].z - spawn_z;
             float dist_sq = dist_x * dist_x + dist_z * dist_z;
             
-            // If outside the wander radius, revert movement and pick a new direction
-            // Flying animals get a larger wander radius
+            // If outside the wander radius, don't revert position but adjust direction to head back
             float flying_wander_radius = ANIMAL_WANDER_RADIUS * 1.5f;
             if (dist_sq > flying_wander_radius * flying_wander_radius) {
-                // Revert position
-                animals[i].x = original_x;
-                animals[i].z = original_z;
-                
-                // Pick new direction (towards spawn point)
+                // Calculate angle back to spawn point
                 float angle_to_center = atan2f(-dist_x, -dist_z) * 180.0f / M_PI;
                 
-                // Add some randomness to the angle (±45 degrees)
-                float random_offset = ((float)rand() / RAND_MAX) * 90.0f - 45.0f;
+                // Add some randomness (±30 degrees) but generally head back
+                float random_offset = ((float)rand() / RAND_MAX) * 60.0f - 30.0f;
                 animals[i].direction = angle_to_center + random_offset;
                 
                 // Update rotation to match new direction
                 animals[i].rotation = animals[i].direction;
-            }
-            
-            // Occasionally change direction for more natural movement
-            if (rand() % 100 < 2) { // 2% chance per frame
+            } 
+            else if (rand() % 100 < 1) { // 1% chance per frame to change direction for more natural movement
                 float random_turn = ((float)rand() / RAND_MAX) * 40.0f - 20.0f; // ±20 degrees
                 animals[i].direction += random_turn;
                 // Keep direction in 0-360 range
@@ -563,7 +558,7 @@ void updateAnimals(float delta_time) {
             }
         } 
         else {
-            // Regular ground animals (existing code)
+            // Regular ground animals
             // Update state timer
             animals[i].state_timer -= delta_time;
             
@@ -606,10 +601,14 @@ void updateAnimals(float delta_time) {
                 float dx = sinf(rad_direction) * animals[i].velocity * delta_time;
                 float dz = cosf(rad_direction) * animals[i].velocity * delta_time;
                 
-                // Store original position in case we need to revert
-                float original_x = animals[i].x;
-                float original_z = animals[i].z;
-                float original_y = animals[i].y;
+                // Ensure the movement is not too small to avoid getting stuck
+                const float MIN_MOVEMENT = 0.001f;
+                if (fabsf(dx) < MIN_MOVEMENT && fabsf(dz) < MIN_MOVEMENT) {
+                    // If movement is too small, amplify it to ensure animal keeps moving
+                    float scale = MIN_MOVEMENT / fmaxf(fabsf(dx), fabsf(dz));
+                    dx *= scale;
+                    dz *= scale;
+                }
                 
                 // Update position
                 animals[i].x += dx;
@@ -625,7 +624,6 @@ void updateAnimals(float delta_time) {
                 animals[i].rotation = animals[i].direction;
                 
                 // Check if animal has wandered too far from its spawn point
-                // For simplicity we're using a circular boundary with radius ANIMAL_WANDER_RADIUS
                 float spawn_x = 0.0f;
                 float spawn_z = 0.0f;
                 
@@ -643,27 +641,33 @@ void updateAnimals(float delta_time) {
                 float dist_z = animals[i].z - spawn_z;
                 float dist_sq = dist_x * dist_x + dist_z * dist_z;
                 
-                // If outside the wander radius, revert movement and pick a new direction
+                // If outside the wander radius, don't revert position but turn toward spawn point
                 if (dist_sq > ANIMAL_WANDER_RADIUS * ANIMAL_WANDER_RADIUS) {
-                    // Revert position
-                    animals[i].x = original_x;
-                    animals[i].y = original_y;
-                    animals[i].z = original_z;
-                    
-                    // Pick new direction (towards spawn point)
+                    // Calculate angle back to spawn point
                     float angle_to_center = atan2f(-dist_x, -dist_z) * 180.0f / M_PI;
                     
-                    // Add some randomness to the angle (±45 degrees)
-                    float random_offset = ((float)rand() / RAND_MAX) * 90.0f - 45.0f;
+                    // Add some randomness but generally head back to spawn
+                    float random_offset = ((float)rand() / RAND_MAX) * 40.0f - 20.0f; // ±20 degrees
                     animals[i].direction = angle_to_center + random_offset;
                     
                     // Update rotation to match new direction
                     animals[i].rotation = animals[i].direction;
+                    
+                    // Boost speed slightly to help animal return to area faster
+                    animals[i].velocity = animals[i].max_velocity * 1.2f;
+                }
+                else {
+                    // Occasionally change direction for more natural movement
+                    if (rand() % 250 < 1) {  // 0.4% chance per frame
+                        float random_turn = ((float)rand() / RAND_MAX) * 120.0f - 60.0f; // ±60 degrees
+                        animals[i].direction += random_turn;
+                        
+                        // Keep direction in 0-360 range
+                        while (animals[i].direction < 0) animals[i].direction += 360.0f;
+                        while (animals[i].direction >= 360.0f) animals[i].direction -= 360.0f;
+                    }
                 }
             }
         }
-        
-        // Update state timer for all animal types
-        animals[i].state_timer -= delta_time;
     }
 }
