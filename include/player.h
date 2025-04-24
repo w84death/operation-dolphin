@@ -6,10 +6,12 @@
 #include "model.h"
 #include "config.h"
 #include "audio.h"  // Include audio for sound effects
+#include "environment.h"  // Include for Wall structure
 
 // Forward declaration for terrain
 typedef struct Terrain Terrain;
 typedef struct AudioSystem AudioSystem;
+// Wall is already defined in environment.h
 
 // Player state structure
 typedef struct {
@@ -35,6 +37,9 @@ typedef struct {
     
     // Terrain reference for height checks
     void* terrain;     // Pointer to terrain for height checks
+    
+    // Wall reference for collision detection
+    Wall* wall;        // Pointer to wall for collision checks
     
     // Audio system reference for sound effects
     AudioSystem* audio;

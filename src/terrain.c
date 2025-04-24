@@ -29,7 +29,7 @@ unsigned int getGlobalTerrainSeed(void) {
 // Create a flat terrain with a simple texture (legacy function, kept for backward compatibility)
 Terrain* createFlatTerrain(float size, float height_scale) {
     // Use default chunk (0,0) with the global seed
-    return createTerrainChunk(size, height_scale, 0, 0, global_terrain_seed);
+    return createTerrainChunk(size * TERRAIN_TILES_COUNT, height_scale, 0, 0, global_terrain_seed);
 }
 
 // Create a terrain chunk at specified coordinates using the provided seed

@@ -164,22 +164,25 @@
 #define TERRAIN_POSITION_X 0.0f
 #define TERRAIN_POSITION_Y 0.0f
 #define TERRAIN_POSITION_Z 0.0f
-#define TERRAIN_TILE_SIZE 50.0f
+#define TERRAIN_TILE_SIZE 25.0f
+#define TERRAIN_TILES_COUNT 8
 #define TERRAIN_HEIGHT_SCALE 2.0f
+
+// Billboard vegetation settings
+#define TERRAIN_MAX_FEATURES 5000
+#define VEGETATION_DENSITY_SMALL 16.0f  // Multiplier for small vegetation
+#define VEGETATION_DENSITY_MEDIUM 4.0f  // Multiplier for medium vegetation
+#define VEGETATION_DENSITY_BIG 1.5f  // Multiplier for big vegetation
+#define FOLIAGE_DEFAULT_SEED 8086    // Default seed for vegetation generation
+
 
 // Wall settings
 #define WALL_TEXTURE "textures/infrastructure/fence1.tga"
 #define WALL_HEIGHT 2.0f
 #define WALL_THICKNESS 0.5f
-#define WALL_INSET 10.0f  // Distance from terrain edge
+#define WALL_INSET CAMERA_FAR
 #define WALL_SEGMENT_LENGTH 2.0f  // Length of each fence segment
 
-// Billboard vegetation settings
-#define TERRAIN_MAX_FEATURES 5000
-#define VEGETATION_DENSITY_SMALL 1.0f  // Multiplier for small vegetation
-#define VEGETATION_DENSITY_MEDIUM 0.25f  // Multiplier for medium vegetation
-#define VEGETATION_DENSITY_BIG 0.05f  // Multiplier for big vegetation
-#define FOLIAGE_DEFAULT_SEED 1337    // Default seed for vegetation generation
 
 // Font settings
 #define GAME_FONT_FILE "fonts/NovaSquare-Regular.ttf"

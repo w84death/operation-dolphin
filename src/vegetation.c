@@ -212,7 +212,8 @@ void createVegetation(int count, float terrain_size) {
     setGlobalTerrainSeed(seed);
     
     // Create vegetation for a single chunk (0,0) using the configured seed
-    createVegetationForChunk(0, 0, terrain_size, seed);
+    // Apply TERRAIN_TILES_COUNT to make vegetation cover the entire larger terrain
+    createVegetationForChunk(0, 0, terrain_size * TERRAIN_TILES_COUNT, seed);
 }
 
 // Clean up vegetation resources

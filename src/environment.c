@@ -414,7 +414,7 @@ void initWall(Wall *wall) {
 // Render the wall around the terrain
 void renderWall(Wall *wall) {
     // Calculate wall dimensions based on terrain size and inset
-    float terrainSize = TERRAIN_TILE_SIZE;
+    float terrainSize = TERRAIN_TILE_SIZE * TERRAIN_TILES_COUNT;
     float halfSize = terrainSize / 2.0f;
     float wallStart = -halfSize + wall->inset;
     float wallEnd = halfSize - wall->inset;
@@ -538,11 +538,11 @@ void renderWallSegment(Wall *wall, float length, float heightOffset) {
 }
 
 // Check for collision with the wall
-int checkWallCollision(float x, float z, float radius) {
-    float terrainSize = TERRAIN_TILE_SIZE;
+int checkWallCollision(float x, float z, float radius, Wall *wall) {
+    float terrainSize = TERRAIN_TILE_SIZE * TERRAIN_TILES_COUNT;
     float halfSize = terrainSize / 2.0f;
-    float wallStart = -halfSize + WALL_INSET;
-    float wallEnd = halfSize - WALL_INSET;
+    float wallStart = -halfSize + wall->inset;  // Use wall->inset instead of WALL_INSET
+    float wallEnd = halfSize - wall->inset;     // Use wall->inset instead of WALL_INSET
     
     // Add a small buffer to prevent getting too close to the wall
     float buffer = radius + 0.1f;

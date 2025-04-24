@@ -61,9 +61,17 @@ bool initItems(void) {
     return true;
 }
 
-// Create items randomly distributed on the terrain
-void createItems(int count, float terrain_size, Terrain* terrain) {
-    log_info("Creating %d items...", count);
+// Create random items scattered across the terrain
+void createItems(int count, float tile_size, Terrain* terrain) {
+    // Calculate the actual terrain size 
+    float terrain_size = tile_size * TERRAIN_TILES_COUNT;
+    float half_size = terrain_size / 2.0f;
+    
+    // Use global random seed for consistent placement
+    unsigned int seed = getGlobalTerrainSeed();
+    srand(seed);
+    
+    logInfo("Creating %d items with seed %u on terrain size %.2f", count, seed, terrain_size);
     
     // Reset item count
     item_count = 0;

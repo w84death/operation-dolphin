@@ -164,7 +164,7 @@ void createStaticElements(int count, float terrain_size) {
     ensureStaticElementCapacity(count);
     
     // Calculate world position
-    float half_size = terrain_size / 2.0f;
+    float half_size = terrain_size * TERRAIN_TILES_COUNT / 2.0f;
     float terrain_offset_x = TERRAIN_POSITION_X;
     float terrain_offset_z = TERRAIN_POSITION_Z;
     float ground_level = TERRAIN_POSITION_Y;

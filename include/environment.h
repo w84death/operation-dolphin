@@ -65,7 +65,7 @@ void setupFogForTimeOfDay(TimeOfDay time_of_day, float fog_start, float fog_end)
 void initWall(Wall *wall);
 void renderWall(Wall *wall);
 void renderWallSegment(Wall *wall, float length, float heightOffset);
-int checkWallCollision(float x, float z, float radius);
+int checkWallCollision(float x, float z, float radius, Wall *wall);  // Updated to include Wall pointer
 
 // Structure for lighting settings
 typedef struct {

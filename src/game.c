@@ -226,14 +226,17 @@ bool initGame(GameState* game) {
     // Initialize terrain system
     game->terrain = createFlatTerrain(TERRAIN_TILE_SIZE, TERRAIN_HEIGHT_SCALE);
     
+    // Initialize the wall around the terrain
+    initWall(&game->wall);
+    
     // Initialize the player
     initPlayer(&game->player, &game->audio);
     
     // Set the terrain reference in the player structure
     game->player.terrain = game->terrain;
     
-    // Initialize the wall around the terrain
-    initWall(&game->wall);
+    // Set the wall reference in the player structure
+    game->player.wall = &game->wall;
     
     // Set initial player position based on terrain height
     float initial_terrain_height = getHeightAtPoint((Terrain*)game->terrain, 0.0f, 0.0f);

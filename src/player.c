@@ -166,8 +166,8 @@ void updatePlayer(Player *player, float delta_time) {
         float new_x = player->position_x + player->velocity_x * delta_time;
         float new_z = player->position_z + player->velocity_z * delta_time;
         
-        // Check for collision with the fence wall
-        if (!checkWallCollision(new_x, new_z, player_radius)) {
+        // Check for collision with the fence wall - using the wall reference now
+        if (!checkWallCollision(new_x, new_z, player_radius, player->wall)) {
             // No collision with wall, update position
             player->position_x = new_x;
             player->position_z = new_z;
@@ -257,7 +257,7 @@ void updatePlayer(Player *player, float delta_time) {
     // Make sure we're not out of bounds due to any movement
     if (player->terrain) {
         // Check if current position is beyond the wall boundary
-        if (checkWallCollision(player->position_x, player->position_z, player_radius)) {
+        if (checkWallCollision(player->position_x, player->position_z, player_radius, player->wall)) {
             // If somehow we got out of bounds, reset position to previous position
             player->position_x = prev_x;
             player->position_z = prev_z;
