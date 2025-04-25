@@ -41,29 +41,12 @@ struct Animal {
     bool ascending;      // Whether the animal is currently ascending
 };
 
-// Constants for animal textures and rendering
-#define MAX_ANIMAL_SPECIES 16
-#define MAX_ANIMAL_COUNT 500
-
-// Animal movement constants
-#define ANIMAL_MIN_IDLE_TIME 1.0f     // Minimum idle time in seconds
-#define ANIMAL_MAX_IDLE_TIME 5.0f     // Maximum idle time in seconds
-#define ANIMAL_MIN_WALK_TIME 2.0f     // Minimum walking time in seconds
-#define ANIMAL_MAX_WALK_TIME 8.0f     // Maximum walking time in seconds
-#define ANIMAL_WANDER_RADIUS 15.0f    // Maximum distance animals can wander from spawn point
-
-// Flying animal constants
-#define FLYING_MIN_HEIGHT 6.0f        // Minimum flying height above terrain
-#define FLYING_MAX_HEIGHT 12.0f       // Maximum flying height above terrain
-#define FLYING_VERTICAL_SPEED 1.5f    // Vertical movement speed
-#define FLYING_MIN_HEIGHT_TIME 5.0f   // Minimum time before changing height
-#define FLYING_MAX_HEIGHT_TIME 12.0f  // Maximum time before changing height
 
 // Animal related functions
 void setAnimalGameStatePointer(void* game_ptr);
 bool loadAnimalTextures(void);
 void createAnimals(int count, float terrain_size);
-void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed, int count);
+void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed, int count, float flying_ratio);
 void updateAnimals(float delta_time);
 void renderAnimals(float camera_x, float camera_z);
 void cleanupAnimals(void);

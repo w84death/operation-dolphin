@@ -28,7 +28,6 @@ static const AnimalSpecies ANIMAL_SPECIES[] = {
     {"Dino",        "dino",         1.0f,  1.0f,   1.2f,  ANIMAL_BEHAVIOR_SCARED},
     {"T-Rex",       "trex",         3.2f,  3.2f,   1.8f,  ANIMAL_BEHAVIOR_AGGRESSIVE},
     {"Velocicaptor", "velocicaptor", 2.0f,  2.0f,   5.0f,  ANIMAL_BEHAVIOR_AGGRESSIVE},
-    {"Cavesaurus", "cavesaurus",  2.0f,  2.0f,   1.5f,  ANIMAL_BEHAVIOR_AGGRESSIVE},
     {"Stegosaurus", "stegosaurus",  6.0f,  6.0f,   0.8f,  ANIMAL_BEHAVIOR_PASSIVE},
     {"Brontosaurus", "brontosaurus",2.0f,  2.0f,   1.0f,  ANIMAL_BEHAVIOR_PASSIVE},
     {"Pterodactyl", "pterodactyl",  1.5f,  1.5f,   3.0f,  ANIMAL_FLYING},

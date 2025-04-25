@@ -164,9 +164,9 @@
 #define TERRAIN_POSITION_X 0.0f
 #define TERRAIN_POSITION_Y 0.0f
 #define TERRAIN_POSITION_Z 0.0f
-#define TERRAIN_TILE_SIZE 25.0f
+#define TERRAIN_TILE_SIZE 16.0f
 #define TERRAIN_TILES_COUNT 8
-#define TERRAIN_HEIGHT_SCALE 2.0f
+#define TERRAIN_HEIGHT_SCALE 2.5f
 
 // Billboard vegetation settings
 #define TERRAIN_MAX_FEATURES 5000
@@ -255,5 +255,23 @@
 #define MAP_ANIMAL_COLOR_G 1.0f
 #define MAP_ANIMAL_COLOR_B 0.2f
 #define MAP_ANIMAL_COLOR_A 1.0f   // Full opacity for better visibility
+
+// Constants for animal textures and rendering
+#define MAX_ANIMAL_SPECIES 16
+#define MAX_ANIMAL_COUNT 500
+
+// Animal movement constants
+#define ANIMAL_MIN_IDLE_TIME 1.0f     // Minimum idle time in seconds
+#define ANIMAL_MAX_IDLE_TIME 5.0f     // Maximum idle time in seconds
+#define ANIMAL_MIN_WALK_TIME 2.0f     // Minimum walking time in seconds
+#define ANIMAL_MAX_WALK_TIME 8.0f     // Maximum walking time in seconds
+#define ANIMAL_WANDER_RADIUS 15.0f    // Maximum distance animals can wander from spawn point
+
+// Flying animal constants
+#define FLYING_MIN_HEIGHT 6.0f        // Minimum flying height above terrain
+#define FLYING_MAX_HEIGHT 12.0f       // Maximum flying height above terrain
+#define FLYING_VERTICAL_SPEED 1.5f    // Vertical movement speed
+#define FLYING_MIN_HEIGHT_TIME 5.0f   // Minimum time before changing height
+#define FLYING_MAX_HEIGHT_TIME 12.0f  // Maximum time before changing height
 
 #endif // CONFIG_H

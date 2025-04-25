@@ -150,28 +150,42 @@ void createAnimals(int count, float terrain_size) {
     int chunks_per_side = TERRAIN_TILES_COUNT;
     float chunk_size = terrain_size;
     
-    // Distribute animals evenly across all chunks
-    int animals_per_chunk = count / (chunks_per_side * chunks_per_side);
-    int remaining_animals = count % (chunks_per_side * chunks_per_side);
+    // Reserve more animals for central chunks
+    int central_animal_count = (int)(count * 0.3f); // 30% in the center (within fence)
+    int remaining_animals = count - central_animal_count;
     
-    logInfo("Creating animals across %dx%d chunks, ~%d per chunk", 
-           chunks_per_side, chunks_per_side, animals_per_chunk);
+    // Central region is approximately 3x3 chunks in the center
+    int central_chunks_radius = 1; // This creates a 3x3 grid centered at 0,0
+    int central_chunk_count = (2*central_chunks_radius + 1) * (2*central_chunks_radius + 1);
+    int animals_per_central_chunk = central_animal_count / central_chunk_count;
     
-    // Create animals for each chunk
-    for (int z = 0; z < chunks_per_side; z++) {
-        for (int x = 0; x < chunks_per_side; x++) {
-            // Calculate how many animals to place in this chunk
-            int chunk_animal_count = animals_per_chunk;
+    // Calculate outer chunks and animals per outer chunk
+    int total_chunks = chunks_per_side * chunks_per_side;
+    int outer_chunk_count = total_chunks - central_chunk_count;
+    int animals_per_outer_chunk = remaining_animals / outer_chunk_count;
+    
+    logInfo("Creating animals: %d in central chunks (~%d each), %d in outer chunks (~%d each)", 
+           central_animal_count, animals_per_central_chunk, 
+           remaining_animals, animals_per_outer_chunk);
+    
+    // Create animals with more balanced distribution
+    for (int z = -chunks_per_side/2; z < chunks_per_side/2; z++) {
+        for (int x = -chunks_per_side/2; x < chunks_per_side/2; x++) {
+            // Determine chunk type (central vs. outer)
+            bool is_central_chunk = (abs(x) <= central_chunks_radius && abs(z) <= central_chunks_radius);
             
-            // Distribute any remaining animals to the first chunks
-            if (remaining_animals > 0) {
-                chunk_animal_count++;
-                remaining_animals--;
-            }
+            // Calculate how many animals to place in this chunk
+            int chunk_animal_count = is_central_chunk ? animals_per_central_chunk : animals_per_outer_chunk;
+            
+            // Ensure we have at least one animal per chunk
+            if (chunk_animal_count < 1)
+                chunk_animal_count = 1;
+                
+            // Use flying animals in outer chunks more often
+            float flying_ratio = is_central_chunk ? 0.2f : 0.6f;
             
             // Create animals for this chunk
-            createAnimalsForChunk(x - chunks_per_side/2, z - chunks_per_side/2, 
-                               chunk_size, seed, chunk_animal_count);
+            createAnimalsForChunk(x, z, chunk_size, seed, chunk_animal_count, flying_ratio);
         }
     }
     
@@ -180,7 +194,7 @@ void createAnimals(int count, float terrain_size) {
 }
 
 // Create animals for a specific chunk
-void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed, int count) {
+void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned int seed, int count, float flying_ratio) {
     if (count <= 0) return;
     
     // Initialize random seed for this chunk
@@ -196,16 +210,24 @@ void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned 
     float chunk_offset_z = chunk_z * chunk_size;
     float ground_level = TERRAIN_POSITION_Y;
     
-    // Count how many animal species have their textures loaded
-    int available_species_count = 0;
+    // Count available flying and ground animal species
+    int available_flying_species = 0;
+    int available_ground_species = 0;
+    int flying_species_indices[MAX_ANIMAL_SPECIES];
+    int ground_species_indices[MAX_ANIMAL_SPECIES];
+    
     for (int i = 0; i < ANIMAL_SPECIES_COUNT && i < MAX_ANIMAL_SPECIES; i++) {
         if (animal_textures_loaded[i]) {
-            available_species_count++;
+            if (ANIMAL_SPECIES[i].behavior == ANIMAL_FLYING) {
+                flying_species_indices[available_flying_species++] = i;
+            } else {
+                ground_species_indices[available_ground_species++] = i;
+            }
         }
     }
     
     // Return if no animal species are available
-    if (available_species_count == 0) {
+    if (available_flying_species == 0 && available_ground_species == 0) {
         logError("No animal species available with loaded textures");
         return;
     }
@@ -215,23 +237,28 @@ void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned 
         int current_index = animal_count;
         if (current_index >= animal_capacity) break;
         
-        // Select a random species from the ones with loaded textures
-        int species_offset = rand() % available_species_count;
-        int species_index = -1;
+        // Determine if this should be a flying animal based on the ratio
+        bool create_flying_animal = ((float)rand() / RAND_MAX) < flying_ratio;
         
-        // Find the nth loaded species
-        for (int j = 0, found = 0; j < ANIMAL_SPECIES_COUNT; j++) {
-            if (animal_textures_loaded[j]) {
-                if (found == species_offset) {
-                    species_index = j;
-                    break;
-                }
-                found++;
-            }
+        // If we can't create the preferred type, use what's available
+        if ((create_flying_animal && available_flying_species == 0) ||
+            (!create_flying_animal && available_ground_species == 0)) {
+            create_flying_animal = (available_flying_species > 0);
         }
         
-        // Skip this animal if we couldn't find a valid species
-        if (species_index < 0) continue;
+        // Select a species based on the type
+        int species_index;
+        if (create_flying_animal && available_flying_species > 0) {
+            // Choose a random flying species
+            int species_offset = rand() % available_flying_species;
+            species_index = flying_species_indices[species_offset];
+        } else if (available_ground_species > 0) {
+            // Choose a random ground species
+            int species_offset = rand() % available_ground_species;
+            species_index = ground_species_indices[species_offset];
+        } else {
+            continue; // Skip this animal if no suitable species found
+        }
         
         // Store the species index
         animals[current_index].species_index = species_index;
@@ -255,18 +282,18 @@ void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned 
         // Set initial state and movement parameters
         animals[current_index].state = ANIMAL_IDLE;
         animals[current_index].state_timer = ANIMAL_MIN_IDLE_TIME + 
-                                    ((float)rand() / RAND_MAX) * 
-                                    (ANIMAL_MAX_IDLE_TIME - ANIMAL_MIN_IDLE_TIME);
+                                   ((float)rand() / RAND_MAX) * 
+                                   (ANIMAL_MAX_IDLE_TIME - ANIMAL_MIN_IDLE_TIME);
         animals[current_index].velocity = 0.0f;
         animals[current_index].max_velocity = species->speed * (0.8f + ((float)rand() / RAND_MAX) * 0.4f);
         
         // Handle flying animals
         if (species->behavior == ANIMAL_FLYING) {
             animals[current_index].flight_height = FLYING_MIN_HEIGHT + 
-                                         ((float)rand() / RAND_MAX) * 
-                                         (FLYING_MAX_HEIGHT - FLYING_MIN_HEIGHT);
+                                        ((float)rand() / RAND_MAX) * 
+                                        (FLYING_MAX_HEIGHT - FLYING_MIN_HEIGHT);
             animals[current_index].y += animals[current_index].flight_height;
-            animals[current_index].vertical_velocity = 0.0f;
+            animals[current_index].vertical_velocity = FLYING_VERTICAL_SPEED;
             animals[current_index].ascending = ((float)rand() / RAND_MAX) > 0.5f;
         }
         
@@ -280,9 +307,10 @@ void createAnimalsForChunk(int chunk_x, int chunk_z, float chunk_size, unsigned 
         // Increment animal count
         animal_count++;
         
-        logInfo("Created animal in chunk (%d,%d): type=%s, position=(%.2f, %.2f, %.2f)", 
-                chunk_x, chunk_z, species->name, animals[current_index].x, 
-                animals[current_index].y, animals[current_index].z);
+        logInfo("Created animal in chunk (%d,%d): type=%s (%s), position=(%.2f, %.2f, %.2f)", 
+                chunk_x, chunk_z, species->name,
+                (species->behavior == ANIMAL_FLYING) ? "flying" : "ground",
+                animals[current_index].x, animals[current_index].y, animals[current_index].z);
     }
 }
 
@@ -460,6 +488,9 @@ void updateAnimals(float delta_time) {
     GameState* game = (GameState*)game_state_ptr;
     Terrain* terrain = game ? (Terrain*)game->terrain : NULL;
     
+    // Define fence boundary (square centered at origin)
+    float fence_half_size = TERRAIN_TILE_SIZE; // Center chunk only
+    
     for (int i = 0; i < animal_count; i++) {
         if (!animals[i].active) continue;
         
@@ -634,9 +665,44 @@ void updateAnimals(float delta_time) {
                     dz *= scale;
                 }
                 
+                // Calculate new position
+                float new_x = animals[i].x + dx;
+                float new_z = animals[i].z + dz;
+                
+                // Check if the animal would cross the fence boundary
+                bool is_inside_fence_now = fabsf(animals[i].x) < fence_half_size && 
+                                           fabsf(animals[i].z) < fence_half_size;
+                bool would_be_inside_fence = fabsf(new_x) < fence_half_size && 
+                                           fabsf(new_z) < fence_half_size;
+                                           
+                // Only allow movement if:
+                // 1. Animal is outside fence and stays outside
+                // 2. Animal is inside fence and stays inside
+                bool allow_movement = (is_inside_fence_now == would_be_inside_fence);
+                
+                // Special case: If animal is outside but near fence and trying to go in, let it
+                if (!is_inside_fence_now && would_be_inside_fence) {
+                    allow_movement = true;
+                }
+                
+                // If movement is not allowed, the animal hits the fence and turns around
+                if (!allow_movement) {
+                    // Turn the animal around (180 degrees + some randomness)
+                    float random_offset = ((float)rand() / RAND_MAX) * 60.0f - 30.0f; // ±30 degrees
+                    animals[i].direction = animals[i].direction + 180.0f + random_offset;
+                    while (animals[i].direction >= 360.0f) animals[i].direction -= 360.0f;
+                    
+                    // Update rotation to match new direction
+                    animals[i].rotation = animals[i].direction;
+                    
+                    // Slight backoff from fence
+                    new_x = animals[i].x;
+                    new_z = animals[i].z;
+                }
+                
                 // Update position
-                animals[i].x += dx;
-                animals[i].z += dz;
+                animals[i].x = new_x;
+                animals[i].z = new_z;
                 
                 // Update Y position based on terrain height
                 float ground_level = getHeightAtPoint(terrain, animals[i].x, animals[i].z);
